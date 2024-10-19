@@ -5,11 +5,13 @@
 #include "processor.h"
 #include "stack.h"
 
-int main(int argc, char* argv[])
+int main(const int argc, const char* argv[])
 {
     PROCESSOR spu = {};
 
-    Run(&spu, argc, argv[1]);
+    spuCtor(&spu, argc, argv[1]);
+    spuRun(&spu);
+    spuDtor(&spu);
 
     return 0;
 }

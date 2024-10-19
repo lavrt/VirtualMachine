@@ -2,7 +2,7 @@
 
 #include <stdlib.h>
 #include <assert.h>
-#include "string.h"
+#include <string.h>
 
 ON_DEBUG(#include "hashing.h")
 

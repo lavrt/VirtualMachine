@@ -8,12 +8,9 @@
 #include "stack.h"
 #include "instructions.h"
 
-static void ReadData(PROCESSOR* spu, const int argc, const char* argv);
+static void ReadData(PROCESSOR* spu, FILE* data_file);
 
-static const int ADD_SIZE_OF_CMD_ARRAY = 50;
-static const char* DEFAULT_DATA_FILE = "default_machine_code_in.txt";
-
-void spuCtor(PROCESSOR* spu, const int argc, const char* argv)
+void spuCtor(PROCESSOR* spu, FILE* data_file)
 {
     Stack_t stk = {};
     STACKCTOR(&stk);
@@ -25,17 +22,12 @@ void spuCtor(PROCESSOR* spu, const int argc, const char* argv)
     spu->registers = NULL;
     spu->run = true;
 
-    ReadData(spu, argc, argv);
+    ReadData(spu, data_file);
 }
 
-static void ReadData(PROCESSOR* spu, const int argc, const char* argv) // FIXME поправить
+static void ReadData(PROCESSOR* spu, FILE* data_file)
 {
     assert(spu);
-
-    FILE * data_file = NULL;
-    if (argc == 1) { data_file = fopen(DEFAULT_DATA_FILE, "rb"); }
-    if (argc >= 2) { data_file = fopen(argv, "rb"); }
-    assert(data_file);
 
     assert(ADD_SIZE_OF_CMD_ARRAY > 0);
     int * code = (int*)calloc(ADD_SIZE_OF_CMD_ARRAY, sizeof(int));

@@ -16,8 +16,9 @@ struct PROCESSOR
 };
 
 static const double kEpsilon = 1e-6;
+const int ADD_SIZE_OF_CMD_ARRAY = 50;
 
-void spuCtor(PROCESSOR* spu, const int argc, const char* argv);
+void spuCtor(PROCESSOR* spu, FILE* data_file);
 void spuRun(PROCESSOR*);
 void spuDtor(PROCESSOR* spu);
 int numbers_equal(StackElem_t first_number, StackElem_t second_number);

@@ -40,27 +40,25 @@ struct LabelSystem
 void interpreter(CurrentCommand* cmd, LabelSystem* current_labels);
 void LabelsCtor(LabelSystem* current_labels);
 int label_search(LabelSystem* current_labels, char* name_of_potential_label);
+void asmRun(CurrentCommand* cmd, LabelSystem* current_labels);
+void LabelsDtor(LabelSystem* current_labels);
+void display_syntax_error(CurrentCommand* cmd);
 
 int main()
 {
     CurrentCommand cmd = {};
-    LabelSystem current_labels = {};
-
-    LabelsCtor(&current_labels);
 
     cmd.asm_file = fopen(NAME_OF_ASM_CODE_FILE, "rb");
     assert(cmd.asm_file);
     cmd.code_file = fopen(NAME_OF_MACHINE_CODE_FILE, "wb");
     assert(cmd.code_file);
 
-    cmd.sntxerr = false;
-    int eof_indicator = 0;
-    while(!cmd.sntxerr && eof_indicator != EOF && cmd.number_of_argument != EOF)
-    {
-        eof_indicator = fscanf(cmd.asm_file, "%s", cmd.instruction);
-        cmd.number_of_argument = fscanf(cmd.asm_file, "%d", &cmd.value);
-        if (eof_indicator != EOF) { interpreter(&cmd, &current_labels); }
-    }
+    LabelSystem current_labels = {};
+    LabelsCtor(&current_labels);
+
+    asmRun(&cmd, &current_labels);
+
+    LabelsDtor(&current_labels);
 
     FCLOSE(cmd.asm_file);
     FCLOSE(cmd.code_file);
@@ -96,10 +94,7 @@ void interpreter(CurrentCommand* cmd, LabelSystem* current_labels)
         if (!strcmp(cmd->instruction, "jne" )) { fprintf(cmd->code_file, "%d ", CMD_JNE ); break; }
         if ( strchr(cmd->instruction,  ':'  )) { current_labels->cmd_counter--           ; break; }
 
-        current_labels->cmd_counter--;
-        cmd->sntxerr = true;
-        fprintf(stderr,    "SNTXERR: \"%s\"\n", cmd->instruction);
-        fprintf(cmd->code_file, "SNTXERR: \"%s\"\n", cmd->instruction);
+        display_syntax_error(cmd);
         assert(0);
     }
 
@@ -107,9 +102,7 @@ void interpreter(CurrentCommand* cmd, LabelSystem* current_labels)
     {
         if (cmd->number_of_argument != 1)
         {
-            cmd->sntxerr = true;
-            fprintf(stderr,    "SNTXERR: \"%s\"\n", cmd->instruction);
-            fprintf(cmd->code_file, "SNTXERR: \"%s\"\n", cmd->instruction);
+            display_syntax_error(cmd);
             assert(0);
         }
         current_labels->cmd_counter++;
@@ -119,9 +112,7 @@ void interpreter(CurrentCommand* cmd, LabelSystem* current_labels)
     {
         if (cmd->number_of_argument != 1)
         {
-            cmd->sntxerr = true;
-            fprintf(stderr,    "SNTXERR: \"%s\"\n", cmd->instruction);
-            fprintf(cmd->code_file, "SNTXERR: \"%s\"\n", cmd->instruction);
+            display_syntax_error(cmd);
             assert(0);
         }
         current_labels->cmd_counter++;
@@ -150,9 +141,7 @@ void interpreter(CurrentCommand* cmd, LabelSystem* current_labels)
             }
             else
             {
-                cmd->sntxerr = true;
-                fprintf(stderr,    "SNTXERR: \"%s\"\n", cmd->instruction);
-                fprintf(cmd->code_file, "SNTXERR: \"%s\"\n", cmd->instruction);
+                display_syntax_error(cmd);
                 assert(0);
             }
         }
@@ -185,4 +174,34 @@ int label_search(LabelSystem* current_labels, char* name_of_potential_label)
         if (!strcmp(current_labels->labels[i].name, name_of_potential_label)) { return i; }
     }
     return -1;
+}
+
+void asmRun(CurrentCommand* cmd, LabelSystem* current_labels)
+{
+    cmd->sntxerr = false;
+    int eof_indicator = 0;
+    while(!cmd->sntxerr && eof_indicator != EOF && cmd->number_of_argument != EOF)
+    {
+        eof_indicator = fscanf(cmd->asm_file, "%s", cmd->instruction);
+        cmd->number_of_argument = fscanf(cmd->asm_file, "%d", &cmd->value);
+        if (eof_indicator != EOF) { interpreter(&cmd, &current_labels); }
+    }
+}
+
+void LabelsDtor(LabelSystem* current_labels)
+{
+    current_labels->number_of_labels = 0;
+    current_labels->cmd_counter = 0;
+    for (int i = 0; i < MAX_NUMBER_OF_LABELS; i++)
+    {
+        current_labels->labels[i].position = 0;
+        current_labels->labels[i].name = "";
+    }
+}
+
+void display_syntax_error(CurrentCommand* cmd)
+{
+    cmd->sntxerr = true;
+    fprintf(stderr,         "Syntax error: \"%s\"\n", cmd->instruction);
+    fprintf(cmd->code_file, "Syntax error: \"%s\"\n", cmd->instruction);
 }

@@ -7,37 +7,37 @@
 
 // FIXME константы, например LabelSystem* -> LabelSystem* const
 
-void LabelsCtor(LabelSystem* current_labels)
+void LabelsCtor(Assembler* ASM)
 {
-    assert(current_labels);
+    assert(ASM);
 
-    current_labels->cmd_counter = 0;
-    current_labels->number_of_labels = 0;
+    ASM->current_labels.cmd_counter = 0;
+    ASM->current_labels.number_of_labels = 0;
 
-    for (int i = 0; i < MAX_NUMBER_OF_LABELS; i++) { current_labels->labels[i].position = -1; }
+    for (int i = 0; i < MAX_NUMBER_OF_LABELS; i++) { ASM->current_labels.labels[i].position = -1; }
 }
 
-int label_search(LabelSystem* current_labels, char* name_of_potential_label)
+int label_search(Assembler* ASM, const char* const name_of_potential_label)
 {
-    assert(current_labels);
+    assert(ASM);
     assert(name_of_potential_label);
 
     for (int i = 0; i < MAX_NUMBER_OF_LABELS; i++)
     {
-        if (!strcmp(current_labels->labels[i].name, name_of_potential_label)) { return i; }
+        if (!strcmp(ASM->current_labels.labels[i].name, name_of_potential_label)) { return i; }
     }
     return -1;
 }
 
-void LabelsDtor(LabelSystem* current_labels)
+void LabelsDtor(Assembler* ASM)
 {
-    assert(current_labels);
+    assert(ASM);
 
-    current_labels->number_of_labels = 0;
-    current_labels->cmd_counter = 0;
+    ASM->current_labels.number_of_labels = 0;
+    ASM->current_labels.cmd_counter = 0;
     for (int i = 0; i < MAX_NUMBER_OF_LABELS; i++)
     {
-        current_labels->labels[i].position = 0;
-        memset(current_labels->labels[i].name, 0, MAX_LENGTH_OF_LABELS);
+        ASM->current_labels.labels[i].position = 0;
+        memset(ASM->current_labels.labels[i].name, 0, MAX_LENGTH_OF_LABELS);
     }
 }

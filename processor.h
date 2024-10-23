@@ -11,7 +11,7 @@ struct PROCESSOR
     size_t size;
     size_t ip;
     struct Stack_t stack;
-    int* registers;
+    int registers[10];
     bool run;
 };
 

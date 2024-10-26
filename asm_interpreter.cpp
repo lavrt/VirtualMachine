@@ -37,7 +37,6 @@ void asmRun(Assembler* ASM)
 
     while(!ASM->sntxerr && eof_indicator != EOF && ASM->cmd.number_of_argument != EOF)
     {
-        memset(ASM->cmd.instruction, '\0', 50);
         if (instruction_not_read) { eof_indicator = fscanf(ASM->asm_file, "%s", ASM->cmd.instruction); }
         ASM->cmd.number_of_argument = fscanf(ASM->asm_file, "%d", &ASM->cmd.value);
         instruction_not_read = true;

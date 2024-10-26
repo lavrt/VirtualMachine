@@ -20,6 +20,9 @@ int main(const int argc, const char* argv[])
 
     spuCtor(&spu, data_file);
     spuRun(&spu);
+
+    for (int i = 0; i < 8; i++) printf("%d ", spu.registers[i]);
+
     spuDtor(&spu);
 
     return 0;

@@ -23,6 +23,7 @@ struct CurrentCommand
 {
     char instruction[50]; // FIXME динамически выделять и лучше использовать не char а uint8_t
     int value;
+    char name_of_register[2];
     int number_of_argument;
 };
 

@@ -5,6 +5,7 @@
 #include <stdlib.h>
 
 #include "asm_structures.h"
+#include "instructions.h"
 
 const int ADD_SIZE_OF_CMD_ARRAY = 50;
 
@@ -20,5 +21,7 @@ void display_syntax_error(Assembler* ASM);
 void CommandStreamCtor(Assembler* ASM);
 void memory_expansion(Assembler* ASM);
 void asmDtor(Assembler* ASM);
+enum REGISTERS check_register_name(const char* const name);
+int setbit(const int value, const int position);
 
 #endif // ASM_INTERPRETER_H

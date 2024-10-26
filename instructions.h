@@ -46,4 +46,32 @@ const char* const JBE  = "jbe" ;
 const char* const JE   = "je"  ;
 const char* const JNE  = "jne" ;
 
+
+const int NUMBER_OF_REGISTERS = 8;
+enum ARG_TYPE
+{
+    USING_REGISTER = 7,
+};
+enum REGISTERS
+{
+    NO_REG = 0,
+    REG_AX = 1,
+    REG_BX = 2,
+    REG_CX = 3,
+    REG_DX = 4,
+    REG_EX = 5,
+    REG_FX = 6,
+    REG_GX = 7,
+    REG_HX = 8,
+};
+
+const char* const AX   = "ax"  ;
+const char* const BX   = "bx"  ;
+const char* const CX   = "cx"  ;
+const char* const DX   = "dx"  ;
+const char* const EX   = "ex"  ;
+const char* const FX   = "fx"  ;
+const char* const GX   = "gx"  ;
+const char* const HX   = "hx"  ;
+
 #endif // INSTRUCTIONS_H

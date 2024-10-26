@@ -33,13 +33,21 @@ static void ReadData(PROCESSOR* spu, FILE* data_file)
 
     fread(&spu->size, sizeof(int), 1, data_file);
 
-    int* code = (int*)calloc(spu->size + 0, sizeof(int));
+    int* code = (int*)calloc(spu->size, sizeof(int));
     assert(code);
     spu->code = code;
 
     fread(spu->code, sizeof(int), spu->size, data_file);
-
+    // for (int i = 0; i < spu->size; i++)
+    // {
+    //     fprintf(stderr, "%d", spu->code[i]);
+    // }
     FCLOSE(data_file);
+}
+
+constexpr int setbit(const int value, const int position)
+{
+    return (value | (1 << position));
 }
 
 void spuRun(PROCESSOR* spu)
@@ -63,10 +71,24 @@ void spuRun(PROCESSOR* spu)
                 spu->ip += 2;
                 break;
             }
+            case setbit(CMD_PUSH, USING_REGISTER):
+            {
+                int register_number = spu->code[spu->ip + 1] - 1;
+                push(&spu->stack, spu->registers[register_number]);
+                spu->ip += 2;
+                break;
+            }
             case CMD_POP:
             {
                 pop(&spu->stack);
                 spu->ip += 1;
+                break;
+            }
+            case setbit(CMD_POP, USING_REGISTER):
+            {
+                int register_number = spu->code[spu->ip + 1] - 1;
+                spu->registers[register_number] = pop(&spu->stack);
+                spu->ip += 2;
                 break;
             }
             case CMD_IN:
@@ -188,7 +210,7 @@ void spuRun(PROCESSOR* spu)
                 StackElem_t a = pop(&spu->stack);
                 StackElem_t b = pop(&spu->stack);
                 if (numbers_equal(a, b)) { spu->ip = (unsigned)spu->code[spu->ip + 1]; }
-                else        { spu->ip += 2; }
+                else                     { spu->ip += 2; }
                 break;
             }
             case CMD_JNE:
@@ -223,7 +245,7 @@ int numbers_equal(StackElem_t first_number, StackElem_t second_number)
     return fabs(first_number - second_number) < kEpsilon;
 }
 
-// void spuDump(PROCESSOR* spu)
+// void spuDump(PROCESSOsR* spu)
 // {
 //     for (int i = 0; i < spu->size; i++)
 //     {

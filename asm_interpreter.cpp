@@ -9,6 +9,8 @@
 
 static const char* NAME_OF_ASM_CODE_FILE = "asm_code_in.txt"; // FIXME добавб define DEBUG_PRINT
 static const char* NAME_OF_MACHINE_CODE_FILE = "machine_code_in.txt";
+
+#define $ fprintf(stderr, "%s:%d in function: %s\n", __FILE__, __LINE__, __func__);
 // FIXME разбить на папки
 
 void asmCtor(Assembler* ASM)
@@ -27,21 +29,60 @@ void asmCtor(Assembler* ASM)
 
 void asmRun(Assembler* ASM)
 {
+    assert(ASM);
+
     ASM->sntxerr = false;
     int eof_indicator = 0;
+    bool instruction_not_read = true;
+
     while(!ASM->sntxerr && eof_indicator != EOF && ASM->cmd.number_of_argument != EOF)
     {
-        eof_indicator = fscanf(ASM->asm_file, "%s", ASM->cmd.instruction);
+        memset(ASM->cmd.instruction, '\0', 50);
+        if (instruction_not_read) { eof_indicator = fscanf(ASM->asm_file, "%s", ASM->cmd.instruction); }
         ASM->cmd.number_of_argument = fscanf(ASM->asm_file, "%d", &ASM->cmd.value);
-        if (eof_indicator != EOF) { interpreter(ASM); }
+        instruction_not_read = true;
+        if (eof_indicator == EOF) { break; }
+
+        if (!strcmp(ASM->cmd.instruction, PUSH) && ASM->cmd.number_of_argument == 0)
+        {
+            if (!fscanf(ASM->asm_file, "%s", ASM->cmd.name_of_register)) { assert(0); }
+        }
+        if (!strcmp(ASM->cmd.instruction, POP))
+        {
+            fscanf(ASM->asm_file, "%s", ASM->cmd.instruction);
+            if (check_register_name(ASM->cmd.instruction))
+            {
+                strcpy(ASM->cmd.name_of_register, ASM->cmd.instruction);
+                strcpy(ASM->cmd.instruction, POP);
+            }
+            else
+            {
+                ASM->commands.code[ASM->commands.size++] = CMD_POP;
+                instruction_not_read = false;
+                continue;
+            }
+        }
+
+        if (eof_indicator != EOF)
+        {
+            interpreter(ASM);
+        }
     }
+
     fwrite(&ASM->commands.size, sizeof(int), 1, ASM->code_file);
     fwrite(ASM->commands.code, sizeof(int), ASM->commands.size, ASM->code_file);
 }
 
 void interpreter(Assembler* ASM)
 {
-    if (ASM->commands.size == ASM->commands.capacity - 10) { memory_expansion(ASM); }
+    assert(ASM);
+
+    if (ASM->commands.size == ASM->commands.capacity)
+    {
+        ASM->commands.code = (int*)realloc(ASM->commands.code, ASM->commands.size + ADD_SIZE_OF_CMD_ARRAY);
+        ASM->commands.capacity += ADD_SIZE_OF_CMD_ARRAY;
+    }
+
     ASM->current_labels.cmd_counter++;
     while(true)
     {
@@ -71,7 +112,39 @@ void interpreter(Assembler* ASM)
         assert(0);
     }
 
-    if (!strcmp(ASM->cmd.instruction, "push"))
+    if (!strcmp(ASM->cmd.instruction, PUSH))
+    {
+        if (ASM->cmd.number_of_argument == 0 && !check_register_name(ASM->cmd.name_of_register))
+        {
+            display_syntax_error(ASM);
+            assert(0);
+        }
+        if (ASM->cmd.number_of_argument == 0 && check_register_name(ASM->cmd.name_of_register))
+        {
+            ASM->commands.code[ASM->commands.size - 1] = setbit(CMD_PUSH, USING_REGISTER);
+            ASM->commands.code[ASM->commands.size++] = check_register_name(ASM->cmd.name_of_register);
+        }
+        else
+        {
+            ASM->current_labels.cmd_counter++;
+            ASM->commands.code[ASM->commands.size++] = ASM->cmd.value;
+        }
+    }
+    if (!strcmp(ASM->cmd.instruction, POP))
+    {
+        if (ASM->cmd.number_of_argument == 0 && check_register_name(ASM->cmd.name_of_register))
+        {
+            ASM->current_labels.cmd_counter++;
+            ASM->commands.code[ASM->commands.size - 1] = setbit(CMD_POP, USING_REGISTER);
+            ASM->commands.code[ASM->commands.size++] = check_register_name(ASM->cmd.name_of_register);
+        }
+        else
+        {
+            ASM->current_labels.cmd_counter++;
+            ASM->commands.code[ASM->commands.size++] = CMD_POP;
+        }
+    }
+    if (!strcmp(ASM->cmd.instruction, IN))
     {
         if (ASM->cmd.number_of_argument != 1)
         {
@@ -81,20 +154,10 @@ void interpreter(Assembler* ASM)
         ASM->current_labels.cmd_counter++;
         ASM->commands.code[ASM->commands.size++] = ASM->cmd.value;
     }
-    if (!strcmp(ASM->cmd.instruction, "in"))
-    {
-        if (ASM->cmd.number_of_argument != 1)
-        {
-            display_syntax_error(ASM);
-            assert(0);
-        }
-        ASM->current_labels.cmd_counter++;
-        ASM->commands.code[ASM->commands.size++] = ASM->cmd.value;
-    }
-    if (!strcmp(ASM->cmd.instruction, "jmp")
-        || !strcmp(ASM->cmd.instruction, "ja") || !strcmp(ASM->cmd.instruction, "jae")
-        || !strcmp(ASM->cmd.instruction, "jb") || !strcmp(ASM->cmd.instruction, "jbe")
-        || !strcmp(ASM->cmd.instruction, "je") || !strcmp(ASM->cmd.instruction, "jne"))
+    if (!strcmp(ASM->cmd.instruction, JMP)
+        || !strcmp(ASM->cmd.instruction, JA) || !strcmp(ASM->cmd.instruction, JAE)
+        || !strcmp(ASM->cmd.instruction, JB) || !strcmp(ASM->cmd.instruction, JBE)
+        || !strcmp(ASM->cmd.instruction, JE) || !strcmp(ASM->cmd.instruction, JNE))
     {
         char name_of_potential_label[MAX_LENGTH_OF_LABELS] = "";
         if (ASM->cmd.number_of_argument == 1)
@@ -131,34 +194,56 @@ void interpreter(Assembler* ASM)
         ASM->current_labels.number_of_labels++;
     }
 }
-
+// FIXME нет ассертов и констант модификаторов
 void display_syntax_error(Assembler* ASM)
 {
+    assert(ASM);
+
     ASM->sntxerr = true;
-    fprintf(stderr,              "Syntax error: \"%s\"\n", ASM->cmd.instruction);
+    fprintf(stderr,         "Syntax error: \"%s\"\n", ASM->cmd.instruction);
     fprintf(ASM->code_file, "Syntax error: \"%s\"\n", ASM->cmd.instruction);
 }
 
 void CommandStreamCtor(Assembler* ASM)
 {
-    ASM->commands.code = (int*)calloc(50, sizeof(int));
-    assert(ASM->commands.code);
-    ASM->commands.capacity = 50;
-    ASM->commands.size = 0;
-}
+    assert(ASM);
 
-void memory_expansion(Assembler* ASM)
-{
-    ASM->commands.code = (int*)realloc(ASM->commands.code, ASM->commands.size + ADD_SIZE_OF_CMD_ARRAY);
+    ASM->commands.code = (int*)calloc(ADD_SIZE_OF_CMD_ARRAY, sizeof(int));
+    ASM->commands.capacity = ADD_SIZE_OF_CMD_ARRAY;
+    ASM->commands.size = 0;
+
     assert(ASM->commands.code);
-    ASM->commands.capacity += ADD_SIZE_OF_CMD_ARRAY;
 }
 
 void asmDtor(Assembler* ASM)
 {
+    assert(ASM);
+    assert(ASM->commands.code);
+
     LabelsDtor(ASM);
     FREE(ASM->commands.code);
 
     FCLOSE(ASM->asm_file);
     FCLOSE(ASM->code_file);
+}
+
+enum REGISTERS check_register_name(const char* const name)
+{
+    assert(name);
+
+    if      (!strcmp(name, AX)) { return REG_AX; }
+    else if (!strcmp(name, BX)) { return REG_BX; }
+    else if (!strcmp(name, CX)) { return REG_CX; }
+    else if (!strcmp(name, DX)) { return REG_DX; }
+    else if (!strcmp(name, EX)) { return REG_EX; }
+    else if (!strcmp(name, FX)) { return REG_FX; }
+    else if (!strcmp(name, GX)) { return REG_GX; }
+    else if (!strcmp(name, HX)) { return REG_HX; }
+    else                        { return NO_REG; }
+}
+
+int setbit(const int value, const int position)
+{
+    assert(position >= 0);
+    return value | (1 << position);
 }

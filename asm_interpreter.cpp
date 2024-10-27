@@ -62,10 +62,7 @@ void asmRun(Assembler* ASM)
             }
         }
 
-        if (eof_indicator != EOF)
-        {
-            interpreter(ASM);
-        }
+        if (eof_indicator != EOF) { interpreter(ASM); }
     }
 
     fwrite(&ASM->commands.size, sizeof(int), 1, ASM->code_file);
@@ -76,13 +73,15 @@ void interpreter(Assembler* ASM)
 {
     assert(ASM);
 
-    if (ASM->commands.size == ASM->commands.capacity)
+    if (ASM->commands.capacity - ASM->commands.size <= 10)
     {
-        ASM->commands.code = (int*)realloc(ASM->commands.code, ASM->commands.size + ADD_SIZE_OF_CMD_ARRAY);
+        ASM->commands.code = (int*)realloc(ASM->commands.code, (ASM->commands.size + ADD_SIZE_OF_CMD_ARRAY) * sizeof(int));
         ASM->commands.capacity += ADD_SIZE_OF_CMD_ARRAY;
+        assert(ASM->commands.code);
     }
 
     ASM->current_labels.cmd_counter++;
+
     while(true)
     {
         if (!strcmp(ASM->cmd.instruction, HLT )) { ASM->commands.code[ASM->commands.size++] = CMD_HLT ; break; }
@@ -210,6 +209,7 @@ void CommandStreamCtor(Assembler* ASM)
     ASM->commands.code = (int*)calloc(ADD_SIZE_OF_CMD_ARRAY, sizeof(int));
     ASM->commands.capacity = ADD_SIZE_OF_CMD_ARRAY;
     ASM->commands.size = 0;
+    ASM->cmd.instruction = (char*)calloc(100, sizeof(char));
 
     assert(ASM->commands.code);
 }
@@ -221,6 +221,7 @@ void asmDtor(Assembler* ASM)
 
     LabelsDtor(ASM);
     FREE(ASM->commands.code);
+    FREE(ASM->cmd.instruction);
 
     FCLOSE(ASM->asm_file);
     FCLOSE(ASM->code_file);

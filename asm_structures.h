@@ -21,9 +21,9 @@ struct LabelSystem
 
 struct CurrentCommand
 {
-    char instruction[50]; // FIXME динамически выделять и лучше использовать не char а uint8_t
+    char* instruction; // FIXME динамически выделять и лучше использовать не char а uint8_t
     int value;
-    char name_of_register[2];
+    char name_of_register[8];
     int number_of_argument;
 };
 

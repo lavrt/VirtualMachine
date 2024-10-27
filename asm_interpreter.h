@@ -19,7 +19,6 @@ void asmRun(Assembler* ASM);
 void interpreter(Assembler* ASM);
 void display_syntax_error(Assembler* ASM);
 void CommandStreamCtor(Assembler* ASM);
-void memory_expansion(Assembler* ASM);
 void asmDtor(Assembler* ASM);
 enum REGISTERS check_register_name(const char* const name);
 int setbit(const int value, const int position);

@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include <assert.h>
 #include <string.h>
+#include <math.h>
 
 #include "instructions.h"
 #include "asm_labels.h"
@@ -20,6 +21,8 @@ void asmCtor(Assembler* ASM)
     ASM->code_file = fopen(NAME_OF_MACHINE_CODE_FILE, "wb");
     ASM->asm_file = fopen(NAME_OF_ASM_CODE_FILE, "rb");
 
+    ASM->sntxerr = false;
+
     CommandStreamCtor(ASM);
     LabelsCtor(ASM);
 
@@ -31,7 +34,6 @@ void asmRun(Assembler* ASM)
 {
     assert(ASM);
 
-    ASM->sntxerr = false;
     int eof_indicator = 0;
     bool instruction_not_read = true;
 
@@ -54,8 +56,9 @@ void asmRun(Assembler* ASM)
                 strcpy(ASM->cmd.name_of_register, ASM->cmd.instruction);
                 strcpy(ASM->cmd.instruction, POP);
             }
-            else
+            else if (check_command_name(ASM->cmd.instruction))
             {
+                ASM->current_labels.cmd_counter++;
                 ASM->commands.code[ASM->commands.size++] = CMD_POP;
                 instruction_not_read = false;
                 continue;
@@ -72,6 +75,8 @@ void asmRun(Assembler* ASM)
 void interpreter(Assembler* ASM)
 {
     assert(ASM);
+    assert(ASM->commands.code);
+    assert(ASM->cmd.instruction);
 
     if (ASM->commands.capacity - ASM->commands.size <= 10)
     {
@@ -119,6 +124,7 @@ void interpreter(Assembler* ASM)
         }
         if (ASM->cmd.number_of_argument == 0 && check_register_name(ASM->cmd.name_of_register))
         {
+            ASM->current_labels.cmd_counter++;
             ASM->commands.code[ASM->commands.size - 1] = setbit(CMD_PUSH, USING_REGISTER);
             ASM->commands.code[ASM->commands.size++] = check_register_name(ASM->cmd.name_of_register);
         }
@@ -127,6 +133,7 @@ void interpreter(Assembler* ASM)
             ASM->current_labels.cmd_counter++;
             ASM->commands.code[ASM->commands.size++] = ASM->cmd.value;
         }
+        ASM->cmd.number_of_argument = 0;
     }
     if (!strcmp(ASM->cmd.instruction, POP))
     {
@@ -135,11 +142,6 @@ void interpreter(Assembler* ASM)
             ASM->current_labels.cmd_counter++;
             ASM->commands.code[ASM->commands.size - 1] = setbit(CMD_POP, USING_REGISTER);
             ASM->commands.code[ASM->commands.size++] = check_register_name(ASM->cmd.name_of_register);
-        }
-        else
-        {
-            ASM->current_labels.cmd_counter++;
-            ASM->commands.code[ASM->commands.size++] = CMD_POP;
         }
     }
     if (!strcmp(ASM->cmd.instruction, IN))
@@ -151,6 +153,7 @@ void interpreter(Assembler* ASM)
         }
         ASM->current_labels.cmd_counter++;
         ASM->commands.code[ASM->commands.size++] = ASM->cmd.value;
+        ASM->cmd.number_of_argument = 0;
     }
     if (!strcmp(ASM->cmd.instruction, JMP)
         || !strcmp(ASM->cmd.instruction, JA) || !strcmp(ASM->cmd.instruction, JAE)
@@ -184,6 +187,7 @@ void interpreter(Assembler* ASM)
             assert(0);
         }
         ASM->current_labels.cmd_counter++;
+        ASM->cmd.number_of_argument = 0;
     }
     if (strchr(ASM->cmd.instruction, ':'))
     {
@@ -191,26 +195,33 @@ void interpreter(Assembler* ASM)
         ASM->current_labels.labels[ASM->current_labels.number_of_labels].position = ASM->current_labels.cmd_counter;
         ASM->current_labels.number_of_labels++;
     }
+
+    if (ASM->cmd.number_of_argument != 0 && ASM->cmd.number_of_argument != -1)
+    {
+        fprintf(stderr, "Syntax error: \"%d\"\n", ASM->cmd.value);
+        assert(0);
+    }
 }
-// FIXME нет ассертов и констант модификаторов
-void display_syntax_error(Assembler* ASM)
+
+void display_syntax_error(Assembler* const ASM)
 {
     assert(ASM);
+    assert(ASM->cmd.instruction);
 
     ASM->sntxerr = true;
-    fprintf(stderr,         "Syntax error: \"%s\"\n", ASM->cmd.instruction);
-    fprintf(ASM->code_file, "Syntax error: \"%s\"\n", ASM->cmd.instruction);
+    fprintf(stderr, "Syntax error: \"%s\"\n", ASM->cmd.instruction);
 }
 
 void CommandStreamCtor(Assembler* ASM)
 {
     assert(ASM);
 
+    ASM->cmd.instruction = (char*)calloc(MAX_LENGTH_OF_INSTRUCTION, sizeof(char));
     ASM->commands.code = (int*)calloc(ADD_SIZE_OF_CMD_ARRAY, sizeof(int));
     ASM->commands.capacity = ADD_SIZE_OF_CMD_ARRAY;
     ASM->commands.size = 0;
-    ASM->cmd.instruction = (char*)calloc(100, sizeof(char));
 
+    assert(ASM->cmd.instruction);
     assert(ASM->commands.code);
 }
 
@@ -218,6 +229,7 @@ void asmDtor(Assembler* ASM)
 {
     assert(ASM);
     assert(ASM->commands.code);
+    assert(ASM->cmd.instruction);
 
     LabelsDtor(ASM);
     FREE(ASM->commands.code);
@@ -231,7 +243,7 @@ enum REGISTERS check_register_name(const char* const name)
 {
     assert(name);
 
-    if      (!strcmp(name, AX)) { return REG_AX; }
+         if (!strcmp(name, AX)) { return REG_AX; }
     else if (!strcmp(name, BX)) { return REG_BX; }
     else if (!strcmp(name, CX)) { return REG_CX; }
     else if (!strcmp(name, DX)) { return REG_DX; }
@@ -240,6 +252,33 @@ enum REGISTERS check_register_name(const char* const name)
     else if (!strcmp(name, GX)) { return REG_GX; }
     else if (!strcmp(name, HX)) { return REG_HX; }
     else                        { return NO_REG; }
+}
+
+bool check_command_name(const char* const name)
+{
+    assert(name);
+
+         if (!strcmp(name, HLT )) { return true ; }
+    else if (!strcmp(name, PUSH)) { return true ; }
+    else if (!strcmp(name, POP )) { return true ; }
+    else if (!strcmp(name, IN  )) { return true ; }
+    else if (!strcmp(name, OUT )) { return true ; }
+    else if (!strcmp(name, DUMP)) { return true ; }
+    else if (!strcmp(name, ADD )) { return true ; }
+    else if (!strcmp(name, SUB )) { return true ; }
+    else if (!strcmp(name, MUL )) { return true ; }
+    else if (!strcmp(name, DIV )) { return true ; }
+    else if (!strcmp(name, SQRT)) { return true ; }
+    else if (!strcmp(name, SIN )) { return true ; }
+    else if (!strcmp(name, COS )) { return true ; }
+    else if (!strcmp(name, JMP )) { return true ; }
+    else if (!strcmp(name, JA  )) { return true ; }
+    else if (!strcmp(name, JAE )) { return true ; }
+    else if (!strcmp(name, JB  )) { return true ; }
+    else if (!strcmp(name, JBE )) { return true ; }
+    else if (!strcmp(name, JE  )) { return true ; }
+    else if (!strcmp(name, JNE )) { return true ; }
+    else                          { return false; }
 }
 
 int setbit(const int value, const int position)

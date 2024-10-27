@@ -7,7 +7,7 @@
 
 // FIXME константы, например LabelSystem* -> LabelSystem* const
 
-void LabelsCtor(Assembler* ASM)
+void LabelsCtor(Assembler* const ASM)
 {
     assert(ASM);
 
@@ -17,7 +17,7 @@ void LabelsCtor(Assembler* ASM)
     for (int i = 0; i < MAX_NUMBER_OF_LABELS; i++) { ASM->current_labels.labels[i].position = -1; }
 }
 
-int label_search(Assembler* ASM, const char* const name_of_potential_label)
+int label_search(const Assembler* const ASM, const char* const name_of_potential_label)
 {
     assert(ASM);
     assert(name_of_potential_label);
@@ -26,10 +26,11 @@ int label_search(Assembler* ASM, const char* const name_of_potential_label)
     {
         if (!strcmp(ASM->current_labels.labels[i].name, name_of_potential_label)) { return i; }
     }
+
     return -1;
 }
 
-void LabelsDtor(Assembler* ASM)
+void LabelsDtor(Assembler* const ASM)
 {
     assert(ASM);
 

@@ -13,7 +13,7 @@ struct PROCESSOR
     size_t ip;
     struct Stack_t stack;
     int registers[NUMBER_OF_REGISTERS];
-    StackElem_t* ram;
+    StackElem_t* ram; // FIXME char* -> байты
     bool run;
 };
 
@@ -22,9 +22,9 @@ const int ADD_SIZE_OF_CMD_ARRAY = 50;
 const int AMOUNT_OF_RAM = 1024;
 
 void spuCtor(PROCESSOR* spu, FILE* data_file);
-void spuRun(PROCESSOR*);
+void spuRun(PROCESSOR* spu);
 void spuDtor(PROCESSOR* spu);
-int numbers_equal(StackElem_t first_number, StackElem_t second_number);
+int numbersEqual(StackElem_t first_number, StackElem_t second_number);
 constexpr int setbit(const int value, const int position);
 //void spuDump(PROCESSOR* spu);
 

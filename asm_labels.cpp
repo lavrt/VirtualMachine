@@ -15,7 +15,7 @@ void LabelsCtor(Assembler* const ASM)
     for (int i = 0; i < MAX_NUMBER_OF_LABELS; i++) { ASM->current_labels.labels[i].position = -1; }
 }
 
-int label_search(const Assembler* const ASM, const char* const name_of_potential_label)
+int labelSearch(const Assembler* const ASM, const char* const name_of_potential_label)
 {
     assert(ASM);
     assert(name_of_potential_label);

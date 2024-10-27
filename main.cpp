@@ -16,6 +16,7 @@ int main(const int argc, const char* argv[])
     assert(data_file);
 
     spuCtor(&spu, data_file);
+
     spuRun(&spu);
 
     spuDtor(&spu);

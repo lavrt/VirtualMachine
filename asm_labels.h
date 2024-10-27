@@ -4,7 +4,7 @@
 #include "asm_structures.h"
 
 void LabelsCtor(Assembler* const ASM);
-int label_search(const Assembler* const ASM, const char* const name_of_potential_label);
+int labelSearch(const Assembler* const ASM, const char* const name_of_potential_label);
 void LabelsDtor(Assembler* const ASM);
 
 #endif // ASM_LABELS_H

@@ -13,14 +13,12 @@
 static void ReadData(PROCESSOR* spu, FILE* data_file);
 
 void spuCtor(PROCESSOR* spu, FILE* data_file)
-{
-    Stack_t stk = {};
-    STACKCTOR(&stk);
+{ // FIXME assert?
+    STACKCTOR(&spu->stack);
 
     spu->code = NULL;
     spu->size = 0;
     spu->ip = 0;
-    spu->stack = stk;
     spu->run = true;
 
     spu->ram = (StackElem_t*)calloc(AMOUNT_OF_RAM, sizeof(StackElem_t));
@@ -225,7 +223,7 @@ void spuRun(PROCESSOR* spu)
             {
                 StackElem_t a = pop(&spu->stack);
                 StackElem_t b = pop(&spu->stack);
-                if (numbers_equal(a, b)) { spu->ip = (unsigned)spu->code[spu->ip + 1]; }
+                if (numbersEqual(a, b)) { spu->ip = (unsigned)spu->code[spu->ip + 1]; }
                 else                     { spu->ip += 2; }
                 break;
             }
@@ -233,7 +231,7 @@ void spuRun(PROCESSOR* spu)
             {
                 StackElem_t a = pop(&spu->stack);
                 StackElem_t b = pop(&spu->stack);
-                if (!numbers_equal(a, b)) { spu->ip = (unsigned)spu->code[spu->ip + 1]; }
+                if (!numbersEqual(a, b)) { spu->ip = (unsigned)spu->code[spu->ip + 1]; }
                 else                      { spu->ip += 2; }
                 break;
             }
@@ -258,7 +256,7 @@ void spuDtor(PROCESSOR* spu)
     spu->ip = 0;
 }
 
-int numbers_equal(StackElem_t first_number, StackElem_t second_number)
+int numbersEqual(StackElem_t first_number, StackElem_t second_number)
 {
     return fabs(first_number - second_number) < kEpsilon;
 }

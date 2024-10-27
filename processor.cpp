@@ -55,7 +55,7 @@ void spuRun(PROCESSOR* spu)
     assert(spu);
 
     while(spu->run)
-    { // printf("__%d__\n", spu->ip);
+    {
         switch(spu->code[spu->ip])
         {
             // NOTE мб вынести каждый кейс в фукнцию и вызывать

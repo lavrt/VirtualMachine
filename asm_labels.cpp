@@ -5,8 +5,6 @@
 #include <assert.h>
 #include <string.h>
 
-// FIXME константы, например LabelSystem* -> LabelSystem* const
-
 void LabelsCtor(Assembler* const ASM)
 {
     assert(ASM);

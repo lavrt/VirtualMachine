@@ -51,6 +51,7 @@ const int NUMBER_OF_REGISTERS = 8;
 enum ARG_TYPE
 {
     USING_REGISTER = 7,
+    USING_RAM      = 6,
 };
 enum REGISTERS
 {

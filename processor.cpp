@@ -23,6 +23,8 @@ void spuCtor(PROCESSOR* spu, FILE* data_file)
     spu->stack = stk;
     spu->run = true;
 
+    spu->ram = (StackElem_t*)calloc(AMOUNT_OF_RAM, sizeof(StackElem_t));
+
     ReadData(spu, data_file);
 }
 
@@ -78,6 +80,13 @@ void spuRun(PROCESSOR* spu)
                 spu->ip += 2;
                 break;
             }
+            case setbit(CMD_PUSH, USING_RAM):
+            {
+                StackElem_t value = spu->ram[spu->code[spu->ip + 1]];
+                push(&spu->stack, value);
+                spu->ip += 2;
+                break;
+            }
             case CMD_POP:
             {
                 pop(&spu->stack);
@@ -89,6 +98,13 @@ void spuRun(PROCESSOR* spu)
                 int register_number = spu->code[spu->ip + 1] - 1;
                 spu->registers[register_number] = pop(&spu->stack);
                 spu->ip += 2;
+                break;
+            }
+            case setbit(CMD_POP, USING_RAM):
+            {
+                StackElem_t value = pop(&spu->stack); // printf("%lg   %d\n", value, spu->ip + 1);
+                spu->ram[spu->code[spu->ip + 1]] = value;
+                spu->ip += 2; //printf("__%lg__", spu->ram[spu->ip + 1]);
                 break;
             }
             case CMD_IN:
@@ -235,7 +251,9 @@ void spuDtor(PROCESSOR* spu)
 {
     StackDtor(&spu->stack);
 
+    FREE(spu->ram);
     FREE(spu->code);
+
     spu->size = 0;
     spu->ip = 0;
 }

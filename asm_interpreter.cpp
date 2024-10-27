@@ -47,6 +47,10 @@ void asmRun(Assembler* ASM)
         if (!strcmp(ASM->cmd.instruction, PUSH) && ASM->cmd.number_of_argument == 0)
         {
             if (!fscanf(ASM->asm_file, "%s", ASM->cmd.name_of_register)) { assert(0); }
+            if (!check_register_name(ASM->cmd.name_of_register) && !(ASM->cmd.ram_address_indicator = sscanf(ASM->cmd.name_of_register, "[%lu", &ASM->cmd.ram_address)))
+            {
+                assert(0);
+            }
         }
         if (!strcmp(ASM->cmd.instruction, POP))
         {
@@ -62,6 +66,10 @@ void asmRun(Assembler* ASM)
                 ASM->commands.code[ASM->commands.size++] = CMD_POP;
                 instruction_not_read = false;
                 continue;
+            }
+            else if ((ASM->cmd.ram_address_indicator = sscanf(ASM->cmd.instruction, "[%lu", &ASM->cmd.ram_address)))
+            {
+                strcpy(ASM->cmd.instruction, POP);
             }
         }
 
@@ -80,7 +88,8 @@ void interpreter(Assembler* ASM)
 
     if (ASM->commands.capacity - ASM->commands.size <= 10)
     {
-        ASM->commands.code = (int*)realloc(ASM->commands.code, (ASM->commands.size + ADD_SIZE_OF_CMD_ARRAY) * sizeof(int));
+        ASM->commands.code = (int*)realloc(ASM->commands.code,
+                                                            (ASM->commands.size + ADD_SIZE_OF_CMD_ARRAY) * sizeof(int));
         ASM->commands.capacity += ADD_SIZE_OF_CMD_ARRAY;
         assert(ASM->commands.code);
     }
@@ -117,16 +126,24 @@ void interpreter(Assembler* ASM)
 
     if (!strcmp(ASM->cmd.instruction, PUSH))
     {
-        if (ASM->cmd.number_of_argument == 0 && !check_register_name(ASM->cmd.name_of_register))
+        if (ASM->cmd.number_of_argument == 0 && !check_register_name(ASM->cmd.name_of_register) && !ASM->cmd.ram_address_indicator)
         {
             display_syntax_error(ASM);
             assert(0);
         }
-        if (ASM->cmd.number_of_argument == 0 && check_register_name(ASM->cmd.name_of_register))
+        else if (ASM->cmd.number_of_argument == 0 && check_register_name(ASM->cmd.name_of_register) && !ASM->cmd.ram_address_indicator)
         {
             ASM->current_labels.cmd_counter++;
             ASM->commands.code[ASM->commands.size - 1] = setbit(CMD_PUSH, USING_REGISTER);
             ASM->commands.code[ASM->commands.size++] = check_register_name(ASM->cmd.name_of_register);
+            memset(ASM->cmd.name_of_register, '\0', 8);
+        }
+        else if (ASM->cmd.ram_address_indicator != 0 && ASM->cmd.ram_address_indicator != EOF)
+        {
+            ASM->current_labels.cmd_counter++;
+            ASM->commands.code[ASM->commands.size - 1] = setbit(CMD_PUSH, USING_RAM);
+            ASM->commands.code[ASM->commands.size++] = ASM->cmd.ram_address;
+            ASM->cmd.ram_address_indicator = 0;
         }
         else
         {
@@ -142,6 +159,14 @@ void interpreter(Assembler* ASM)
             ASM->current_labels.cmd_counter++;
             ASM->commands.code[ASM->commands.size - 1] = setbit(CMD_POP, USING_REGISTER);
             ASM->commands.code[ASM->commands.size++] = check_register_name(ASM->cmd.name_of_register);
+            memset(ASM->cmd.name_of_register, '\0', 8);
+        }
+        else if (ASM->cmd.ram_address_indicator != 0 && ASM->cmd.ram_address_indicator != EOF)
+        {
+            ASM->current_labels.cmd_counter++;
+            ASM->commands.code[ASM->commands.size - 1] = setbit(CMD_POP, USING_RAM);
+            ASM->commands.code[ASM->commands.size++] = ASM->cmd.ram_address;
+            ASM->cmd.ram_address_indicator = 0;
         }
     }
     if (!strcmp(ASM->cmd.instruction, IN))

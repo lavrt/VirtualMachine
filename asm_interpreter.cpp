@@ -8,6 +8,7 @@
 #include "instructions.h"
 #include "asm_labels.h"
 
+// вынести в debug.h
 #define $ fprintf(stderr, "%s:%d in function: %s\n", __FILE__, __LINE__, __func__);
 // FIXME разбить на папки
 
@@ -29,16 +30,16 @@ void asmCtor(Assembler* const ASM)
 {
     assert(ASM);
 
-    ASM->code_file = fopen(NAME_OF_MACHINE_CODE_FILE, "wb");
-    ASM->asm_file = fopen(NAME_OF_ASM_CODE_FILE, "rb");
+    ASM->code_file = fopen(NAME_OF_MACHINE_CODE_FILE, "wb"); // FIXME открывать в конце, чтоб открыть, записать, закрыть сразу
+    assert(ASM->code_file);
+
+    ASM->asm_file = fopen(NAME_OF_ASM_CODE_FILE, "rb"); // FIXME открыть, считать в буфер, закрыть
+    assert(ASM->asm_file);
 
     ASM->sntxerr = false;
 
     сommandStreamCtor(ASM);
     LabelsCtor(ASM);
-
-    assert(ASM->code_file);
-    assert(ASM->asm_file);
 }
 
 void asmDtor(Assembler* const ASM)
@@ -57,6 +58,14 @@ void asmDtor(Assembler* const ASM)
 
 void asmRun(Assembler* const ASM)
 {
+    // FIXME переписать:
+    // идём по строчкам
+    // внутри срочки мы можем понять что она: 1) пустая, 2) метка(по :), 3) команда, иначе синтаксическая ошибка
+    // если метка то обрабатываем как метку
+    // если пустая то пропускаем
+    // если команда, то определяем команду и обрабатываем аргументы(отдельная функция)
+    // всё
+
     assert(ASM);
 
     int eof_indicator = 0;
@@ -72,7 +81,8 @@ void asmRun(Assembler* const ASM)
         if (!strcmp(ASM->cmd.instruction, PUSH) && ASM->cmd.number_of_argument == 0)
         {
             if (!fscanf(ASM->asm_file, "%s", ASM->cmd.name_of_register)) { assert(0); }
-            if (!checkRegisterName(ASM->cmd.name_of_register) && !(ASM->cmd.ram_address_indicator = sscanf(ASM->cmd.name_of_register, "[%lu", &ASM->cmd.ram_address)))
+            if (!checkRegisterName(ASM->cmd.name_of_register)
+                && !(ASM->cmd.ram_address_indicator = sscanf(ASM->cmd.name_of_register, "[%lu", &ASM->cmd.ram_address)))
             {
                 assert(0);
             }
@@ -255,7 +265,7 @@ static void сommandStreamCtor(Assembler* const ASM)
     ASM->commands.capacity = ADD_SIZE_OF_CMD_ARRAY;
     ASM->commands.size = 0;
 
-    assert(ASM->cmd.instruction);
+    assert(ASM->cmd.instruction); // FIXME лучше сразу проверять если что то открываешь или выделяешь, и лучше не асертом(но это *)
     assert(ASM->commands.code);
 }
 

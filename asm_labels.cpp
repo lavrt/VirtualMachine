@@ -12,7 +12,9 @@ void LabelsCtor(Assembler* const ASM)
     ASM->current_labels.cmd_counter = 0;
     ASM->current_labels.number_of_labels = 0;
 
-    for (int i = 0; i < MAX_NUMBER_OF_LABELS; i++) { ASM->current_labels.labels[i].position = -1; }
+    for (int i = 0; i < MAX_NUMBER_OF_LABELS; i++) {
+        ASM->current_labels.labels[i].position = -1; // FIXME лучше хранить количество записанных, а не -1
+    }
 }
 
 int labelSearch(const Assembler* const ASM, const char* const name_of_potential_label)
@@ -25,7 +27,7 @@ int labelSearch(const Assembler* const ASM, const char* const name_of_potential_
         if (!strcmp(ASM->current_labels.labels[i].name, name_of_potential_label)) { return i; }
     }
 
-    return -1;
+    return -1; // FIXME вынести в константу
 }
 
 void LabelsDtor(Assembler* const ASM)

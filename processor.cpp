@@ -45,6 +45,7 @@ static void ReadData(PROCESSOR* spu, FILE* data_file)
     FCLOSE(data_file);
 }
 
+// FIXME в двух файлах уже
 constexpr int setbit(const int value, const int position)
 {
     return (value | (1 << position));
@@ -58,7 +59,7 @@ void spuRun(PROCESSOR* spu)
     {
         switch(spu->code[spu->ip])
         {
-            // NOTE мб вынести каждый кейс в фукнцию и вызывать
+            // FIXME вынести каждый кейс в фукнцию и вызывать
             case CMD_HLT:
             {
                 spu->run = false;

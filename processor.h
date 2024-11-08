@@ -13,7 +13,7 @@ struct PROCESSOR
     size_t ip;
     struct Stack_t stack;
     int registers[NUMBER_OF_REGISTERS];
-    StackElem_t* ram; // FIXME char* -> байты
+    StackElem_t* ram; // FIXME StackElem_t* -> char*
     bool run;
 };
 

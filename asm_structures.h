@@ -23,7 +23,7 @@ struct CurrentCommand
 {
     char* instruction;
     int value;
-    char name_of_register[8]; // FIXME вынести
+    char name_of_register[8]; // FIXME вынести 8
     int number_of_argument;
     size_t ram_address;
     int ram_address_indicator;

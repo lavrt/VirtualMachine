@@ -91,9 +91,9 @@ void asmRun(Assembler* const ASM)
                 if (strchr(ptr, '[') && strchr(ptr, ']'))
                 {
                     ASM->cmd.presence_ram = true;
-                    ASM->cmd.ram_address = atoi(strtok(strchr(ptr, '['), "[]"));
+                    ASM->cmd.ram_address = (size_t)atoi(strtok(strchr(ptr, '['), "[]"));
                 }
-                else if (ASM->cmd.name_of_register = checkRegisterName(ptr))
+                else if ((ASM->cmd.name_of_register = checkRegisterName(ptr)))
                 {
                     ASM->cmd.presence_reg = true;
                 }
@@ -137,7 +137,7 @@ void asmRun(Assembler* const ASM)
     assert(ASM->code_file);
 
     fwrite(&ASM->commands.size, sizeof(int), 1, ASM->code_file);
-    fwrite(ASM->commands.code, sizeof(int), ASM->commands.size, ASM->code_file);
+    fwrite(ASM->commands.code, sizeof(int), (size_t)ASM->commands.size, ASM->code_file);
 
     FCLOSE(ASM->code_file);
 }
@@ -153,7 +153,7 @@ static void interpreter(Assembler* const ASM)
     if (ASM->commands.capacity - ASM->commands.size <= 10)
     {
         ASM->commands.code = (int*)realloc(ASM->commands.code,
-            (ASM->commands.size + ADD_SIZE_OF_CMD_ARRAY) * sizeof(int));
+            (long unsigned)(ASM->commands.size + ADD_SIZE_OF_CMD_ARRAY) * sizeof(int));
         ASM->commands.capacity += ADD_SIZE_OF_CMD_ARRAY;
         assert(ASM->commands.code);
     }
@@ -177,7 +177,7 @@ static void interpreter(Assembler* const ASM)
             {
                 ASM->current_labels.cmd_counter++;
                 ASM->commands.code[ASM->commands.size - 1] = setbit(CMD_PUSH, USING_RAM);
-                ASM->commands.code[ASM->commands.size++] = ASM->cmd.ram_address;
+                ASM->commands.code[ASM->commands.size++] = (int)ASM->cmd.ram_address;
             }
             else
             {
@@ -198,7 +198,7 @@ static void interpreter(Assembler* const ASM)
             {
                 ASM->current_labels.cmd_counter++;
                 ASM->commands.code[ASM->commands.size - 1] = setbit(CMD_POP, USING_RAM);
-                ASM->commands.code[ASM->commands.size++] = ASM->cmd.ram_address;
+                ASM->commands.code[ASM->commands.size++] = (int)ASM->cmd.ram_address;
             }
             else
             {
@@ -209,7 +209,7 @@ static void interpreter(Assembler* const ASM)
         else if (!strcmp(ASM->cmd.instruction, IN))
         {
             ASM->current_labels.cmd_counter++;
-            ASM->commands.code[ASM->commands.size++] = ASM->cmd.value;
+            scanf("%d", &(ASM->commands.code[ASM->commands.size++]));
         }
         else if (!strcmp(ASM->cmd.instruction, JMP)
                 || !strcmp(ASM->cmd.instruction, JA) || !strcmp(ASM->cmd.instruction, JAE)

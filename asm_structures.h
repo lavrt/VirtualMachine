@@ -1,10 +1,12 @@
 #ifndef ASM_STRUCTURES_H
 #define ASM_STRUCTURES_H
 
-#include "stdio.h"
+#include <stdio.h>
+#include "instructions.h"
 
 static const int MAX_LENGTH_OF_LABELS = 10;
 static const int MAX_NUMBER_OF_LABELS = 10;
+static const int MAX_NUMBER_OF_REGISTERS = 8;
 
 struct Label
 {
@@ -23,10 +25,15 @@ struct CurrentCommand
 {
     char* instruction;
     int value;
-    char name_of_register[8]; // FIXME вынести 8
-    int number_of_argument;
+
+    bool presence_label = false;
+    char name_of_label[32]; // FIXME const
+
+    bool presence_ram = false;
     size_t ram_address;
-    int ram_address_indicator;
+
+    bool presence_reg = false;
+    enum REGISTERS name_of_register;
 };
 
 struct CommandStream

@@ -13,7 +13,10 @@
 static void ReadData(PROCESSOR* spu, FILE* data_file);
 
 void spuCtor(PROCESSOR* spu, FILE* data_file)
-{ // FIXME assert?
+{
+    assert(spu);
+    assert(data_file);
+
     STACKCTOR(&spu->stack);
 
     spu->code = NULL;

@@ -213,7 +213,6 @@ static void interpreter(Assembler* const ASM)
 
     ASM->current_labels.cmd_counter++;
 
-
     ASM->commands.code[ASM->commands.size++] = checkCommandName(ASM->cmd.instruction);
 
     if (!strcmp(ASM->cmd.instruction, PUSH))

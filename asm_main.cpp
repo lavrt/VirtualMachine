@@ -13,7 +13,7 @@ int main()
     Assembler ASM = {};
     asmCtor(&ASM);
 
-    asmRun(&ASM);
+    twoPassCompilation(&ASM);
 
     asmDtor(&ASM);
 

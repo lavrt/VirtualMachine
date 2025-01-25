@@ -8,6 +8,7 @@
 
 #include "instructions.h"
 #include "asm_labels.h"
+#include "debug.h"
 
 // FIXME разбить на папки
 
@@ -47,7 +48,56 @@ void asmDtor(Assembler* const ASM)
     FREE(ASM->cmd.instruction);
 }
 
-void asmRun(Assembler* const ASM)
+void twoPassCompilation(Assembler* const ASM)
+{
+    firstPass(ASM);
+    secondPass(ASM);
+}
+
+void firstPass(Assembler* const ASM)
+{
+    assert(ASM);
+
+    char string[32] = {};
+
+    ASM->asm_file = fopen(NAME_OF_ASM_CODE_FILE, "rb");
+    assert(ASM->asm_file);
+
+    while (fgets(string, 32, ASM->asm_file))
+    {
+        if (strchr(string, '\n'))
+        {
+            *strchr(string, '\n') = '\0';
+        }
+
+        char* ptr = strtok(string, " ");
+        if (ptr && checkCommandName(ptr))
+        {
+            ASM->current_labels.cmd_counter++;
+        }
+
+        if (   checkCommandName(string) == CMD_PUSH || checkCommandName(string) == CMD_POP
+            || checkCommandName(string) == CMD_JMP  || checkCommandName(string) == CMD_JA
+            || checkCommandName(string) == CMD_JAE  || checkCommandName(string) == CMD_JB
+            || checkCommandName(string) == CMD_JBE  || checkCommandName(string) == CMD_JE
+            || checkCommandName(string) == CMD_JNE)
+        {
+            ASM->current_labels.cmd_counter++;
+        }
+
+        if (strchr(string, ':'))
+        {
+            *strchr(string, ':') = '\0';
+            strcpy(ASM->current_labels.labels[ASM->current_labels.number_of_labels].name, string);
+            ASM->current_labels.labels[ASM->current_labels.number_of_labels].position = ASM->current_labels.cmd_counter;
+            ASM->current_labels.number_of_labels++;
+        }
+    }
+
+    FCLOSE(ASM->asm_file);
+}
+
+void secondPass(Assembler* const ASM)
 {
     assert(ASM);
 
@@ -71,9 +121,7 @@ void asmRun(Assembler* const ASM)
         }
         else if (strchr(string, ':'))
         {
-            ASM->cmd.presence_label = true;
-            *strchr(string, ':') = '\0';
-            strcpy(ASM->cmd.name_of_label, string);
+            continue;
         }
         else if (checkCommandName(ptr1))
         {
@@ -235,13 +283,6 @@ static void interpreter(Assembler* const ASM)
             }
             ASM->current_labels.cmd_counter++;
         }
-    }
-
-    if (ASM->cmd.presence_label)
-    {
-        strcpy(ASM->current_labels.labels[ASM->current_labels.number_of_labels].name, ASM->cmd.name_of_label);
-        ASM->current_labels.labels[ASM->current_labels.number_of_labels].position = ASM->current_labels.cmd_counter;
-        ASM->current_labels.number_of_labels++;
     }
 }
 

@@ -16,7 +16,9 @@ const int MAX_LENGTH_OF_INSTRUCTION = 50;
     do { fclose(file_); file_ = NULL; } while(0)
 
 void asmCtor(Assembler* const ASM);
-void asmRun(Assembler* const ASM);
+void twoPassCompilation(Assembler* const ASM);
+void firstPass(Assembler* const ASM);
+void secondPass(Assembler* const ASM);
 void asmDtor(Assembler* const ASM);
 
 #endif // ASM_INTERPRETER_H

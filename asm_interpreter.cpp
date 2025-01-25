@@ -149,11 +149,16 @@ void secondPass(Assembler* const ASM)
                 {
                     ASM->cmd.value = atoi(ptr);
                 }
+                else
+                {
+                    displaySyntaxError(ASM);
+                    assert(0);
+                }
             }
             else if (!strcmp(ASM->cmd.instruction, JMP)
-                || !strcmp(ASM->cmd.instruction, JA) || !strcmp(ASM->cmd.instruction, JAE)
-                || !strcmp(ASM->cmd.instruction, JB) || !strcmp(ASM->cmd.instruction, JBE)
-                || !strcmp(ASM->cmd.instruction, JE) || !strcmp(ASM->cmd.instruction, JNE))
+                  || !strcmp(ASM->cmd.instruction, JAE) || !strcmp(ASM->cmd.instruction, JA)
+                  || !strcmp(ASM->cmd.instruction, JBE) || !strcmp(ASM->cmd.instruction, JB)
+                  || !strcmp(ASM->cmd.instruction, JNE) || !strcmp(ASM->cmd.instruction, JE))
             {
                 char* ptr = strtok(NULL, " ");
                 if (!ptr)
@@ -208,80 +213,78 @@ static void interpreter(Assembler* const ASM)
 
     ASM->current_labels.cmd_counter++;
 
-    if (checkCommandName(ASM->cmd.instruction))
-    {
-        ASM->commands.code[ASM->commands.size++] = checkCommandName(ASM->cmd.instruction);
 
-        if (!strcmp(ASM->cmd.instruction, PUSH))
+    ASM->commands.code[ASM->commands.size++] = checkCommandName(ASM->cmd.instruction);
+
+    if (!strcmp(ASM->cmd.instruction, PUSH))
+    {
+        ASM->current_labels.cmd_counter++;
+
+        if (ASM->cmd.presence_reg)
         {
-            if (ASM->cmd.presence_reg)
+            ASM->commands.code[ASM->commands.size - 1] = setbit(CMD_PUSH, USING_REGISTER);
+            ASM->commands.code[ASM->commands.size++] = ASM->cmd.name_of_register;
+            ASM->cmd.name_of_register = NO_REG;
+        }
+        else if (ASM->cmd.presence_ram)
+        {
+            ASM->commands.code[ASM->commands.size - 1] = setbit(CMD_PUSH, USING_RAM);
+            ASM->commands.code[ASM->commands.size++] = (int)ASM->cmd.ram_address;
+        }
+        else
+        {
+            ASM->commands.code[ASM->commands.size++] = ASM->cmd.value;
+        }
+    }
+    else if (!strcmp(ASM->cmd.instruction, POP))
+    {
+        ASM->current_labels.cmd_counter++;
+
+        if (ASM->cmd.presence_reg)
+        {
+            ASM->commands.code[ASM->commands.size - 1] = setbit(CMD_POP, USING_REGISTER);
+            ASM->commands.code[ASM->commands.size++] = ASM->cmd.name_of_register;
+            ASM->cmd.name_of_register = NO_REG;
+        }
+        else if (ASM->cmd.presence_ram)
+        {
+            ASM->commands.code[ASM->commands.size - 1] = setbit(CMD_POP, USING_RAM);
+            ASM->commands.code[ASM->commands.size++] = (int)ASM->cmd.ram_address;
+        }
+        else
+        {
+            ASM->commands.code[ASM->commands.size++] = ASM->cmd.value;
+        }
+    }
+    else if (!strcmp(ASM->cmd.instruction, IN))
+    {
+        ASM->current_labels.cmd_counter++;
+
+        scanf("%d", &(ASM->commands.code[ASM->commands.size++]));
+    }
+    else if (!strcmp(ASM->cmd.instruction, JMP)
+            || !strcmp(ASM->cmd.instruction, JA) || !strcmp(ASM->cmd.instruction, JAE)
+            || !strcmp(ASM->cmd.instruction, JB) || !strcmp(ASM->cmd.instruction, JBE)
+            || !strcmp(ASM->cmd.instruction, JE) || !strcmp(ASM->cmd.instruction, JNE))
+    {
+        ASM->current_labels.cmd_counter++;
+
+        if (atoi(ASM->cmd.name_of_label))
+        {
+            ASM->commands.code[ASM->commands.size++] = atoi(ASM->cmd.name_of_label);
+        }
+        else
+        {
+            int index_of_label = labelSearch(ASM, ASM->cmd.name_of_label);
+            if (index_of_label != -1)
             {
-                ASM->current_labels.cmd_counter++;
-                ASM->commands.code[ASM->commands.size - 1] = setbit(CMD_PUSH, USING_REGISTER);
-                ASM->commands.code[ASM->commands.size++] = ASM->cmd.name_of_register;
-                ASM->cmd.name_of_register = NO_REG;
-            }
-            else if (ASM->cmd.presence_ram)
-            {
-                ASM->current_labels.cmd_counter++;
-                ASM->commands.code[ASM->commands.size - 1] = setbit(CMD_PUSH, USING_RAM);
-                ASM->commands.code[ASM->commands.size++] = (int)ASM->cmd.ram_address;
+                ASM->commands.code[ASM->commands.size++] = ASM->current_labels.labels[index_of_label].position;
             }
             else
             {
-                ASM->current_labels.cmd_counter++;
-                ASM->commands.code[ASM->commands.size++] = ASM->cmd.value;
+                displaySyntaxError(ASM);
+                assert(0);
             }
-        }
-        else if (!strcmp(ASM->cmd.instruction, POP))
-        {
-            if (ASM->cmd.presence_reg)
-            {
-                ASM->current_labels.cmd_counter++;
-                ASM->commands.code[ASM->commands.size - 1] = setbit(CMD_POP, USING_REGISTER);
-                ASM->commands.code[ASM->commands.size++] = ASM->cmd.name_of_register;
-                ASM->cmd.name_of_register = NO_REG;
-            }
-            else if (ASM->cmd.presence_ram)
-            {
-                ASM->current_labels.cmd_counter++;
-                ASM->commands.code[ASM->commands.size - 1] = setbit(CMD_POP, USING_RAM);
-                ASM->commands.code[ASM->commands.size++] = (int)ASM->cmd.ram_address;
-            }
-            else
-            {
-                ASM->current_labels.cmd_counter++;
-                ASM->commands.code[ASM->commands.size++] = ASM->cmd.value;
-            }
-        }
-        else if (!strcmp(ASM->cmd.instruction, IN))
-        {
-            ASM->current_labels.cmd_counter++;
-            scanf("%d", &(ASM->commands.code[ASM->commands.size++]));
-        }
-        else if (!strcmp(ASM->cmd.instruction, JMP)
-                || !strcmp(ASM->cmd.instruction, JA) || !strcmp(ASM->cmd.instruction, JAE)
-                || !strcmp(ASM->cmd.instruction, JB) || !strcmp(ASM->cmd.instruction, JBE)
-                || !strcmp(ASM->cmd.instruction, JE) || !strcmp(ASM->cmd.instruction, JNE))
-        {
-            if (atoi(ASM->cmd.name_of_label))
-            {
-                ASM->commands.code[ASM->commands.size++] = atoi(ASM->cmd.name_of_label);
-            }
-            else
-            {
-                int index_of_label = labelSearch(ASM, ASM->cmd.name_of_label);
-                if (index_of_label != -1)
-                {
-                    ASM->commands.code[ASM->commands.size++] = ASM->current_labels.labels[index_of_label].position;
-                }
-                else
-                {
-                    displaySyntaxError(ASM);
-                    assert(0);
-                }
-            }
-            ASM->current_labels.cmd_counter++;
         }
     }
 }

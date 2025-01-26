@@ -84,12 +84,12 @@ static void firstPass(Assembler* const ASM)
 {
     assert(ASM);
 
-    char string[32] = {};
+    char string[MAX_LENGTH_OF_INSTRUCTION] = {};
 
     ASM->asm_file = fopen(NAME_OF_ASM_CODE_FILE, "rb");
     assert(ASM->asm_file);
 
-    while (fgets(string, 32, ASM->asm_file))
+    while (fgets(string, MAX_LENGTH_OF_INSTRUCTION, ASM->asm_file))
     {
         if (strchr(string, '\n'))
         {
@@ -137,12 +137,12 @@ static void secondPass(Assembler* const ASM)
 {
     assert(ASM);
 
-    char string[32] = {};
+    char string[MAX_LENGTH_OF_INSTRUCTION] = {};
 
     ASM->asm_file = fopen(NAME_OF_ASM_CODE_FILE, "rb");
     assert(ASM->asm_file);
 
-    while (fgets(string, 32, ASM->asm_file))
+    while (fgets(string, MAX_LENGTH_OF_INSTRUCTION, ASM->asm_file))
     {
         if (strchr(string, '\n'))
         {
@@ -186,7 +186,7 @@ static void secondPass(Assembler* const ASM)
         ASM->cmd.presence_reg = false;
         ASM->cmd.presence_ram = false;
         ASM->cmd.presence_label = false;
-        memset(ASM->cmd.instruction, '\0', 32);
+        memset(ASM->cmd.instruction, '\0', MAX_LENGTH_OF_INSTRUCTION);
     }
 
     FCLOSE(ASM->asm_file);

@@ -9,6 +9,7 @@
 int main()
 {
     Assembler ASM = {};
+
     asmCtor(&ASM);
 
     twoPassCompilation(&ASM);

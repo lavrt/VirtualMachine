@@ -1,0 +1,12 @@
+Stack_t [0x7fff25594ca0]
+    called from ../Stack/stack.cpp: 109 (pop)
+    name &ASM->callStack born at asm_interpreter.cpp: 47 (asmCtor)
+    {
+        left canary = 0x0
+        right canary = 0x0
+        capacity = 16
+        size     = -1
+        data [0x563d56dd13b0]
+        {
+        }
+    }

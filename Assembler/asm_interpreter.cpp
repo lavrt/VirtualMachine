@@ -12,7 +12,7 @@
 
 // static --------------------------------------------------------------------------------------------------------------
 
-static const char* NAME_OF_ASM_CODE_FILE = "asm_code_in.txt"; // FIXME добавб define DEBUG_PRINT
+static const char* NAME_OF_ASM_CODE_FILE = "asm_code_in.txt";
 static const char* NAME_OF_MACHINE_CODE_FILE = "../Processor/machine_code_in.txt";
 
 static void interpreter(Assembler* const ASM);
@@ -21,6 +21,21 @@ static void сommandStreamCtor(Assembler* const ASM);
 static enum REGISTERS checkRegisterName(const char* const name);
 static enum INSTRUCTIONS checkCommandName(const char* const name);
 static int setbit(const int value, const int position);
+
+static void firstPass(Assembler* const ASM);
+static void secondPass(Assembler* const ASM);
+
+static void processPushOrPopArgument(Assembler* const ASM);
+static void processJumpsArgument(Assembler* const ASM);
+
+static void ensureCapacityOfCodeArray(Assembler* const ASM);
+
+static void encodePush(Assembler* const ASM);
+static void encodePop(Assembler* const ASM);
+static void encodeIn(Assembler* const ASM);
+static void encodeJumps(Assembler* const ASM);
+static void encodeCall(Assembler* const ASM);
+static void encodeRet(Assembler* const ASM);
 
 // global --------------------------------------------------------------------------------------------------------------
 
@@ -32,6 +47,7 @@ void asmCtor(Assembler* const ASM)
 
     сommandStreamCtor(ASM);
     LabelsCtor(ASM);
+    STACKCTOR(&ASM->callStack);
 }
 
 void asmDtor(Assembler* const ASM)
@@ -48,11 +64,23 @@ void asmDtor(Assembler* const ASM)
 
 void twoPassCompilation(Assembler* const ASM)
 {
+    assert(ASM);
+
     firstPass(ASM);
     secondPass(ASM);
+
+    ASM->code_file = fopen(NAME_OF_MACHINE_CODE_FILE, "wb");
+    assert(ASM->code_file);
+
+    fwrite(&ASM->commands.size, sizeof(int), 1, ASM->code_file);
+    fwrite(ASM->commands.code, sizeof(int), (size_t)ASM->commands.size, ASM->code_file);
+
+    FCLOSE(ASM->code_file);
 }
 
-void firstPass(Assembler* const ASM)
+// static --------------------------------------------------------------------------------------------------------------
+
+static void firstPass(Assembler* const ASM)
 {
     assert(ASM);
 
@@ -68,19 +96,27 @@ void firstPass(Assembler* const ASM)
             *strchr(string, '\n') = '\0';
         }
 
-        char* ptr = strtok(string, " ");
-        if (ptr && checkCommandName(ptr))
+        if (!strtok(string, " "))
         {
-            ASM->current_labels.cmd_counter++;
+            continue;
         }
 
-        if (   checkCommandName(string) == CMD_PUSH || checkCommandName(string) == CMD_POP
-            || checkCommandName(string) == CMD_JMP  || checkCommandName(string) == CMD_JA
-            || checkCommandName(string) == CMD_JAE  || checkCommandName(string) == CMD_JB
-            || checkCommandName(string) == CMD_JBE  || checkCommandName(string) == CMD_JE
-            || checkCommandName(string) == CMD_JNE  || checkCommandName(string) == CMD_CALL)
+        switch (checkCommandName(string))
         {
-            ASM->current_labels.cmd_counter++;
+            case NO_CMD  :    break;
+            case CMD_PUSH:
+            case CMD_POP :
+            case CMD_JMP :
+            case CMD_JAE :
+            case CMD_JA  :
+            case CMD_JBE :
+            case CMD_JB  :
+            case CMD_JNE :
+            case CMD_JE  :
+            case CMD_CALL:
+            case CMD_RET :    ASM->current_labels.cmd_counter++;
+
+            default:          ASM->current_labels.cmd_counter++;
         }
 
         if (strchr(string, ':'))
@@ -97,7 +133,7 @@ void firstPass(Assembler* const ASM)
     ASM->current_labels.cmd_counter = 0;
 }
 
-void secondPass(Assembler* const ASM)
+static void secondPass(Assembler* const ASM)
 {
     assert(ASM);
 
@@ -113,61 +149,30 @@ void secondPass(Assembler* const ASM)
             *strchr(string, '\n') = '\0';
         }
 
-        char* ptr1 = strtok(string, " ");
+        char* token = strtok(string, " ");
 
-        if (string[0] == '\0')
+        if (string[0] == '\0' || strchr(string, ':'))
         {
             continue;
         }
-        else if (strchr(string, ':'))
+        else if (checkCommandName(token))
         {
-            continue;
-        }
-        else if (checkCommandName(ptr1))
-        {
-            strcpy(ASM->cmd.instruction, ptr1);
+            strcpy(ASM->cmd.instruction, token);
 
-            if (!strcmp(ASM->cmd.instruction, PUSH) || !strcmp(ASM->cmd.instruction, POP))
+            switch (checkCommandName(ASM->cmd.instruction))
             {
-                char* ptr = strtok(NULL, " ");
-                if (!ptr)
-                {
-                    displaySyntaxError(ASM);
-                    assert(0);
-                }
+                case CMD_PUSH:
+                case CMD_POP :    processPushOrPopArgument(ASM);    break;
+                case CMD_CALL:
+                case CMD_JMP :
+                case CMD_JAE :
+                case CMD_JA  :
+                case CMD_JBE :
+                case CMD_JB  :
+                case CMD_JNE :
+                case CMD_JE  :    processJumpsArgument(ASM);        break;
 
-                if (strchr(ptr, '[') && strchr(ptr, ']'))
-                {
-                    ASM->cmd.presence_ram = true;
-                    ASM->cmd.ram_address = (size_t)atoi(strtok(strchr(ptr, '['), "[]"));
-                }
-                else if ((ASM->cmd.name_of_register = checkRegisterName(ptr)))
-                {
-                    ASM->cmd.presence_reg = true;
-                }
-                else if (atoi(ptr))
-                {
-                    ASM->cmd.value = atoi(ptr);
-                }
-                else
-                {
-                    displaySyntaxError(ASM);
-                    assert(0);
-                }
-            }
-            else if (!strcmp(ASM->cmd.instruction, CALL) || !strcmp(ASM->cmd.instruction, JMP)
-                  || !strcmp(ASM->cmd.instruction, JAE ) || !strcmp(ASM->cmd.instruction, JA )
-                  || !strcmp(ASM->cmd.instruction, JBE ) || !strcmp(ASM->cmd.instruction, JB )
-                  || !strcmp(ASM->cmd.instruction, JNE ) || !strcmp(ASM->cmd.instruction, JE))
-            {
-                char* ptr = strtok(NULL, " ");
-                if (!ptr)
-                {
-                    displaySyntaxError(ASM);
-                    assert(0);
-                }
-
-                strcpy(ASM->cmd.name_of_label, ptr);
+                default: break;
             }
         }
         else
@@ -186,18 +191,53 @@ void secondPass(Assembler* const ASM)
 
     FCLOSE(ASM->asm_file);
 
-    ASM->code_file = fopen(NAME_OF_MACHINE_CODE_FILE, "wb");
-    assert(ASM->code_file);
-
-    fwrite(&ASM->commands.size, sizeof(int), 1, ASM->code_file);
-    fwrite(ASM->commands.code, sizeof(int), (size_t)ASM->commands.size, ASM->code_file);
-
-    FCLOSE(ASM->code_file);
-
     StackDtor(&ASM->callStack);
 }
 
-// static --------------------------------------------------------------------------------------------------------------
+static void processPushOrPopArgument(Assembler* const ASM)
+{
+    assert(ASM);
+
+    char* ptr = strtok(NULL, " ");
+    if (!ptr)
+    {
+        displaySyntaxError(ASM);
+        assert(0);
+    }
+
+    if (strchr(ptr, '[') && strchr(ptr, ']'))
+    {
+        ASM->cmd.presence_ram = true;
+        ASM->cmd.ram_address = (size_t)atoi(strtok(strchr(ptr, '['), "[]"));
+    }
+    else if ((ASM->cmd.name_of_register = checkRegisterName(ptr)))
+    {
+        ASM->cmd.presence_reg = true;
+    }
+    else if (atoi(ptr))
+    {
+        ASM->cmd.value = atoi(ptr);
+    }
+    else
+    {
+        displaySyntaxError(ASM);
+        assert(0);
+    }
+}
+
+static void processJumpsArgument(Assembler* const ASM)
+{
+    assert(ASM);
+
+    char* ptr = strtok(NULL, " ");
+    if (!ptr)
+    {
+        displaySyntaxError(ASM);
+        assert(0);
+    }
+
+    strcpy(ASM->cmd.name_of_label, ptr);
+}
 
 static void interpreter(Assembler* const ASM)
 {
@@ -205,21 +245,116 @@ static void interpreter(Assembler* const ASM)
     assert(ASM->commands.code);
     assert(ASM->cmd.instruction);
 
+    ensureCapacityOfCodeArray(ASM);
+
+    ASM->current_labels.cmd_counter++;
+    ASM->commands.code[ASM->commands.size++] = checkCommandName(ASM->cmd.instruction);
+
+    switch (checkCommandName(ASM->cmd.instruction))
+    {
+        case CMD_PUSH:    encodePush (ASM);    break;
+        case CMD_POP :    encodePop  (ASM);    break;
+        case CMD_IN  :    encodeIn   (ASM);    break;
+        case CMD_CALL:    encodeCall (ASM);
+        case CMD_JMP :
+        case CMD_JAE :
+        case CMD_JA  :
+        case CMD_JBE :
+        case CMD_JB  :
+        case CMD_JNE :
+        case CMD_JE  :    encodeJumps(ASM);    break;
+        case CMD_RET :    encodeRet  (ASM);    break;
+
+        default: break;
+    }
+}
+
+static void ensureCapacityOfCodeArray(Assembler* const ASM)
+{
+    assert(ASM);
+    assert(ASM->commands.code);
+
     if (ASM->commands.capacity - ASM->commands.size <= 10)
     {
         ASM->commands.code = (int*)realloc(ASM->commands.code,
             (long unsigned)(ASM->commands.size + ADD_SIZE_OF_CMD_ARRAY) * sizeof(int));
-        ASM->commands.capacity += ADD_SIZE_OF_CMD_ARRAY;
         assert(ASM->commands.code);
+        ASM->commands.capacity += ADD_SIZE_OF_CMD_ARRAY;
     }
+}
+
+static void encodePush(Assembler* const ASM)
+{
+    assert(ASM);
+    assert(ASM->commands.code);
 
     ASM->current_labels.cmd_counter++;
 
-    if (!strcmp(ASM->cmd.instruction, CALL))
+    if (ASM->cmd.presence_reg)
     {
-        ASM->commands.code[ASM->commands.size++] = CMD_JMP;
-        ASM->current_labels.cmd_counter++;
+        ASM->commands.code[ASM->commands.size - 1] = setbit(CMD_PUSH, USING_REGISTER);
+        ASM->commands.code[ASM->commands.size++] = ASM->cmd.name_of_register;
+        ASM->cmd.name_of_register = NO_REG;
+    }
+    else if (ASM->cmd.presence_ram)
+    {
+        ASM->commands.code[ASM->commands.size - 1] = setbit(CMD_PUSH, USING_RAM);
+        ASM->commands.code[ASM->commands.size++] = (int)ASM->cmd.ram_address;
+    }
+    else
+    {
+        ASM->commands.code[ASM->commands.size++] = ASM->cmd.value;
+    }
+}
 
+static void encodePop(Assembler* ASM)
+{
+    assert(ASM);
+    assert(ASM->commands.code);
+
+    ASM->current_labels.cmd_counter++;
+
+    if (ASM->cmd.presence_reg)
+    {
+        ASM->commands.code[ASM->commands.size - 1] = setbit(CMD_POP, USING_REGISTER);
+        ASM->commands.code[ASM->commands.size++] = ASM->cmd.name_of_register;
+        ASM->cmd.name_of_register = NO_REG;
+    }
+    else if (ASM->cmd.presence_ram)
+    {
+        ASM->commands.code[ASM->commands.size - 1] = setbit(CMD_POP, USING_RAM);
+        ASM->commands.code[ASM->commands.size++] = (int)ASM->cmd.ram_address;
+    }
+    else
+    {
+        ASM->commands.code[ASM->commands.size++] = ASM->cmd.value;
+    }
+}
+
+static void encodeIn(Assembler* const ASM)
+{
+    assert(ASM);
+    assert(ASM->commands.code);
+
+    ASM->current_labels.cmd_counter++;
+
+    scanf("%d", &(ASM->commands.code[ASM->commands.size++]));
+}
+
+static void encodeJumps(Assembler* const ASM)
+{
+    assert(ASM);
+    assert(ASM->commands.code);
+    assert(ASM->current_labels.labels);
+
+    ASM->current_labels.cmd_counter++;
+
+    if (atoi(ASM->cmd.name_of_label))
+    {
+        ASM->commands.code[ASM->commands.size++] = atoi(ASM->cmd.name_of_label);
+    }
+    else
+    {
         int index_of_label = labelSearch(ASM, ASM->cmd.name_of_label);
         if (index_of_label != -1)
         {
@@ -230,97 +365,34 @@ static void interpreter(Assembler* const ASM)
             displaySyntaxError(ASM);
             assert(0);
         }
-
-        printf(" %d ", ASM->current_labels.cmd_counter); // вывел адрес следвующей команды.
-                                                         // кинуть в стек как адрес возврата.
-
-        STACKCTOR(&ASM->callStack);
-        push(&ASM->callStack, ASM->current_labels.cmd_counter);
-        return;
     }
-    else if (!strcmp(ASM->cmd.instruction, RET))
+}
+
+static void encodeCall(Assembler* const ASM)
+{
+    assert(ASM);
+    assert(ASM->commands.code);
+
+    ASM->commands.code[ASM->commands.size - 1] = CMD_JMP;
+
+    push(&ASM->callStack, ASM->current_labels.cmd_counter + 1);
+}
+
+static void encodeRet(Assembler* const ASM)
+{
+    assert(ASM);
+    assert(ASM->commands.code);
+
+    ASM->commands.code[ASM->commands.size - 1] = CMD_JMP;
+    ASM->current_labels.cmd_counter++;
+
+    if (!ASM->callStack.size)
     {
-        ASM->commands.code[ASM->commands.size++] = CMD_JMP;
-        ASM->current_labels.cmd_counter++;
-
-        ASM->commands.code[ASM->commands.size++] = pop(&ASM->callStack);
-
-        return;
+        displaySyntaxError(ASM);
+        assert(0);
     }
 
-    ASM->commands.code[ASM->commands.size++] = checkCommandName(ASM->cmd.instruction);
-
-    if (!strcmp(ASM->cmd.instruction, PUSH))
-    {
-        ASM->current_labels.cmd_counter++;
-
-        if (ASM->cmd.presence_reg)
-        {
-            ASM->commands.code[ASM->commands.size - 1] = setbit(CMD_PUSH, USING_REGISTER);
-            ASM->commands.code[ASM->commands.size++] = ASM->cmd.name_of_register;
-            ASM->cmd.name_of_register = NO_REG;
-        }
-        else if (ASM->cmd.presence_ram)
-        {
-            ASM->commands.code[ASM->commands.size - 1] = setbit(CMD_PUSH, USING_RAM);
-            ASM->commands.code[ASM->commands.size++] = (int)ASM->cmd.ram_address;
-        }
-        else
-        {
-            ASM->commands.code[ASM->commands.size++] = ASM->cmd.value;
-        }
-    }
-    else if (!strcmp(ASM->cmd.instruction, POP))
-    {
-        ASM->current_labels.cmd_counter++;
-
-        if (ASM->cmd.presence_reg)
-        {
-            ASM->commands.code[ASM->commands.size - 1] = setbit(CMD_POP, USING_REGISTER);
-            ASM->commands.code[ASM->commands.size++] = ASM->cmd.name_of_register;
-            ASM->cmd.name_of_register = NO_REG;
-        }
-        else if (ASM->cmd.presence_ram)
-        {
-            ASM->commands.code[ASM->commands.size - 1] = setbit(CMD_POP, USING_RAM);
-            ASM->commands.code[ASM->commands.size++] = (int)ASM->cmd.ram_address;
-        }
-        else
-        {
-            ASM->commands.code[ASM->commands.size++] = ASM->cmd.value;
-        }
-    }
-    else if (!strcmp(ASM->cmd.instruction, IN))
-    {
-        ASM->current_labels.cmd_counter++;
-
-        scanf("%d", &(ASM->commands.code[ASM->commands.size++]));
-    }
-    else if (!strcmp(ASM->cmd.instruction, JMP)
-          || !strcmp(ASM->cmd.instruction, JA ) || !strcmp(ASM->cmd.instruction, JAE)
-          || !strcmp(ASM->cmd.instruction, JB ) || !strcmp(ASM->cmd.instruction, JBE)
-          || !strcmp(ASM->cmd.instruction, JE ) || !strcmp(ASM->cmd.instruction, JNE))
-    {
-        ASM->current_labels.cmd_counter++;
-
-        if (atoi(ASM->cmd.name_of_label))
-        {
-            ASM->commands.code[ASM->commands.size++] = atoi(ASM->cmd.name_of_label);
-        }
-        else
-        {
-            int index_of_label = labelSearch(ASM, ASM->cmd.name_of_label);
-            if (index_of_label != -1)
-            {
-                ASM->commands.code[ASM->commands.size++] = ASM->current_labels.labels[index_of_label].position;
-            }
-            else
-            {
-                displaySyntaxError(ASM);
-                assert(0);
-            }
-        }
-    }
+    ASM->commands.code[ASM->commands.size++] = pop(&ASM->callStack);
 }
 
 static void displaySyntaxError(Assembler* const ASM)

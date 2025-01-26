@@ -1,0 +1,28 @@
+Stack_t [0x7ffe0f7b2248]
+    called from processor.cpp: 130 (spuRun)
+    name &spu->stack born at processor.cpp: 20 (spuCtor)
+    {
+        left canary = 0x0
+        right canary = 0x0
+        capacity = 16
+        size     = 2
+        data [0x60d000000040]
+        {
+            *[0] = 55
+            *[1] = 45
+             [2] = -1.22606e-59 (POISON)
+             [3] = -1.22606e-59 (POISON)
+             [4] = -1.22606e-59 (POISON)
+             [5] = -1.22606e-59 (POISON)
+             [6] = -1.22606e-59 (POISON)
+             [7] = -1.22606e-59 (POISON)
+             [8] = -1.22606e-59 (POISON)
+             [9] = -1.22606e-59 (POISON)
+             [10] = -1.22606e-59 (POISON)
+             [11] = -1.22606e-59 (POISON)
+             [12] = -1.22606e-59 (POISON)
+             [13] = -1.22606e-59 (POISON)
+             [14] = -1.22606e-59 (POISON)
+             [15] = -1.22606e-59 (POISON)
+        }
+    }

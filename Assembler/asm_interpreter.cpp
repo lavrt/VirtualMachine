@@ -10,12 +10,10 @@
 #include "asm_labels.h"
 #include "debug.h"
 
-// FIXME разбить на папки
-
 // static --------------------------------------------------------------------------------------------------------------
 
 static const char* NAME_OF_ASM_CODE_FILE = "asm_code_in.txt"; // FIXME добавб define DEBUG_PRINT
-static const char* NAME_OF_MACHINE_CODE_FILE = "machine_code_in.txt";
+static const char* NAME_OF_MACHINE_CODE_FILE = "../Processor/machine_code_in.txt";
 
 static void interpreter(Assembler* const ASM);
 static void displaySyntaxError(Assembler* const ASM);
@@ -80,7 +78,7 @@ void firstPass(Assembler* const ASM)
             || checkCommandName(string) == CMD_JMP  || checkCommandName(string) == CMD_JA
             || checkCommandName(string) == CMD_JAE  || checkCommandName(string) == CMD_JB
             || checkCommandName(string) == CMD_JBE  || checkCommandName(string) == CMD_JE
-            || checkCommandName(string) == CMD_JNE)
+            || checkCommandName(string) == CMD_JNE  || checkCommandName(string) == CMD_CALL)
         {
             ASM->current_labels.cmd_counter++;
         }
@@ -95,6 +93,8 @@ void firstPass(Assembler* const ASM)
     }
 
     FCLOSE(ASM->asm_file);
+
+    ASM->current_labels.cmd_counter = 0;
 }
 
 void secondPass(Assembler* const ASM)
@@ -155,10 +155,10 @@ void secondPass(Assembler* const ASM)
                     assert(0);
                 }
             }
-            else if (!strcmp(ASM->cmd.instruction, JMP)
-                  || !strcmp(ASM->cmd.instruction, JAE) || !strcmp(ASM->cmd.instruction, JA)
-                  || !strcmp(ASM->cmd.instruction, JBE) || !strcmp(ASM->cmd.instruction, JB)
-                  || !strcmp(ASM->cmd.instruction, JNE) || !strcmp(ASM->cmd.instruction, JE))
+            else if (!strcmp(ASM->cmd.instruction, CALL) || !strcmp(ASM->cmd.instruction, JMP)
+                  || !strcmp(ASM->cmd.instruction, JAE ) || !strcmp(ASM->cmd.instruction, JA )
+                  || !strcmp(ASM->cmd.instruction, JBE ) || !strcmp(ASM->cmd.instruction, JB )
+                  || !strcmp(ASM->cmd.instruction, JNE ) || !strcmp(ASM->cmd.instruction, JE))
             {
                 char* ptr = strtok(NULL, " ");
                 if (!ptr)
@@ -193,6 +193,8 @@ void secondPass(Assembler* const ASM)
     fwrite(ASM->commands.code, sizeof(int), (size_t)ASM->commands.size, ASM->code_file);
 
     FCLOSE(ASM->code_file);
+
+    StackDtor(&ASM->callStack);
 }
 
 // static --------------------------------------------------------------------------------------------------------------
@@ -212,6 +214,39 @@ static void interpreter(Assembler* const ASM)
     }
 
     ASM->current_labels.cmd_counter++;
+
+    if (!strcmp(ASM->cmd.instruction, CALL))
+    {
+        ASM->commands.code[ASM->commands.size++] = CMD_JMP;
+        ASM->current_labels.cmd_counter++;
+
+        int index_of_label = labelSearch(ASM, ASM->cmd.name_of_label);
+        if (index_of_label != -1)
+        {
+            ASM->commands.code[ASM->commands.size++] = ASM->current_labels.labels[index_of_label].position;
+        }
+        else
+        {
+            displaySyntaxError(ASM);
+            assert(0);
+        }
+
+        printf(" %d ", ASM->current_labels.cmd_counter); // вывел адрес следвующей команды.
+                                                         // кинуть в стек как адрес возврата.
+
+        STACKCTOR(&ASM->callStack);
+        push(&ASM->callStack, ASM->current_labels.cmd_counter);
+        return;
+    }
+    else if (!strcmp(ASM->cmd.instruction, RET))
+    {
+        ASM->commands.code[ASM->commands.size++] = CMD_JMP;
+        ASM->current_labels.cmd_counter++;
+
+        ASM->commands.code[ASM->commands.size++] = pop(&ASM->callStack);
+
+        return;
+    }
 
     ASM->commands.code[ASM->commands.size++] = checkCommandName(ASM->cmd.instruction);
 
@@ -262,9 +297,9 @@ static void interpreter(Assembler* const ASM)
         scanf("%d", &(ASM->commands.code[ASM->commands.size++]));
     }
     else if (!strcmp(ASM->cmd.instruction, JMP)
-            || !strcmp(ASM->cmd.instruction, JA) || !strcmp(ASM->cmd.instruction, JAE)
-            || !strcmp(ASM->cmd.instruction, JB) || !strcmp(ASM->cmd.instruction, JBE)
-            || !strcmp(ASM->cmd.instruction, JE) || !strcmp(ASM->cmd.instruction, JNE))
+          || !strcmp(ASM->cmd.instruction, JA ) || !strcmp(ASM->cmd.instruction, JAE)
+          || !strcmp(ASM->cmd.instruction, JB ) || !strcmp(ASM->cmd.instruction, JBE)
+          || !strcmp(ASM->cmd.instruction, JE ) || !strcmp(ASM->cmd.instruction, JNE))
     {
         ASM->current_labels.cmd_counter++;
 
@@ -350,6 +385,8 @@ static enum INSTRUCTIONS checkCommandName(const char* const name)
     else if (!strcmp(name, JBE )) { return CMD_JBE ; }
     else if (!strcmp(name, JE  )) { return CMD_JE  ; }
     else if (!strcmp(name, JNE )) { return CMD_JNE ; }
+    else if (!strcmp(name, CALL)) { return CMD_CALL; }
+    else if (!strcmp(name, RET )) { return CMD_RET ; }
     else                          { return NO_CMD  ; }
 }
 

@@ -6,8 +6,6 @@
 
 #include "asm_interpreter.h"
 
-#define $ fprintf(stderr, "%s:%d in function: %s\n", __FILE__, __LINE__, __func__);
-
 int main()
 {
     Assembler ASM = {};

@@ -1,0 +1,12 @@
+push 55
+push 45
+
+call Label
+
+add
+
+Label:
+out
+ret
+
+hlt

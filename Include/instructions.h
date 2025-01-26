@@ -24,6 +24,8 @@ enum INSTRUCTIONS
     CMD_JBE  = 17,
     CMD_JE   = 18,
     CMD_JNE  = 19,
+    CMD_CALL = 20,
+    CMD_RET  = 21,
 };
 
 const char* const HLT  = "hlt" ;
@@ -46,7 +48,8 @@ const char* const JB   = "jb"  ;
 const char* const JBE  = "jbe" ;
 const char* const JE   = "je"  ;
 const char* const JNE  = "jne" ;
-
+const char* const CALL = "call";
+const char* const RET  = "ret" ;
 
 const int NUMBER_OF_REGISTERS = 8;
 enum ARG_TYPE

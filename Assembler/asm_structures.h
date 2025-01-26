@@ -2,7 +2,9 @@
 #define ASM_STRUCTURES_H
 
 #include <stdio.h>
+
 #include "instructions.h"
+#include "stack.h"
 
 static const int MAX_LENGTH_OF_LABELS = 10;
 static const int MAX_NUMBER_OF_LABELS = 10;
@@ -51,6 +53,7 @@ struct Assembler
     struct CommandStream commands;
     struct CurrentCommand cmd;
     struct LabelSystem current_labels;
+    struct Stack_t callStack;
 };
 
 #endif // ASM_STRUCTURES_H

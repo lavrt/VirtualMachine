@@ -257,8 +257,7 @@ static void executePopIntoRam(PROCESSOR* spu)
 
 static void executeIn(PROCESSOR* spu)
 {
-    StackElem_t value = 0;
-    scanf("%lg", &value);
+    StackElem_t value = spu->code[spu->ip + 1];
     push(&spu->stack, value);
     spu->ip += 2;
 }

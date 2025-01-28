@@ -214,7 +214,7 @@ static void processPushOrPopArgument(Assembler* const ASM)
     {
         ASM->cmd.presence_reg = true;
     }
-    else if (atoi(ptr))
+    else if (atoi(ptr) || ptr[0] == '0')
     {
         ASM->cmd.value = atoi(ptr);
     }

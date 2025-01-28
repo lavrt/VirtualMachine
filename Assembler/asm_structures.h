@@ -6,7 +6,7 @@
 #include "instructions.h"
 #include "stack.h"
 
-static const int MAX_LENGTH_OF_LABELS = 10;
+static const int MAX_LENGTH_OF_LABELS = 64;
 static const int MAX_NUMBER_OF_LABELS = 10;
 static const int MAX_NUMBER_OF_REGISTERS = 8;
 

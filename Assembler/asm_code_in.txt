@@ -1,14 +1,17 @@
-push 55
-push 45
-call Label
-add
-
-Label:
-out
-ret
-
-jmp tmp
+push 0
+pop [0]
+FIRST_LABEL_WHILE_1:
+push [0]
 push 3
-tmp:
+sub
+push 0
+je SECOND_LABEL_WHILE_1
+push [0]
+push 1
+add
+pop [0]
+push [0]
 out
+jmp FIRST_LABEL_WHILE_1
+SECOND_LABEL_WHILE_1:
 hlt

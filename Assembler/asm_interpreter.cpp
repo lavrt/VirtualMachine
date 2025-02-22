@@ -12,8 +12,8 @@
 
 // static --------------------------------------------------------------------------------------------------------------
 
-static const char* NAME_OF_ASM_CODE_FILE = "asm_code_in.txt";
-static const char* NAME_OF_MACHINE_CODE_FILE = "../Processor/machine_code_in.txt";
+static const char* const NAME_OF_ASM_CODE_FILE = "asm_code_in.txt";
+static const char* const NAME_OF_MACHINE_CODE_FILE = "../Processor/machine_code_in.txt";
 
 static void interpreter(Assembler* const ASM);
 static void displaySyntaxError(Assembler* const ASM);
@@ -34,8 +34,6 @@ static void encodePush(Assembler* const ASM);
 static void encodePop(Assembler* const ASM);
 static void encodeIn(Assembler* const ASM);
 static void encodeJumps(Assembler* const ASM);
-static void encodeCall(Assembler* const ASM);
-static void encodeRet(Assembler* const ASM);
 
 // global --------------------------------------------------------------------------------------------------------------
 
@@ -47,7 +45,6 @@ void asmCtor(Assembler* const ASM)
 
     сommandStreamCtor(ASM);
     LabelsCtor(ASM);
-    STACKCTOR(&ASM->callStack);
 }
 
 void asmDtor(Assembler* const ASM)
@@ -103,7 +100,8 @@ static void firstPass(Assembler* const ASM)
 
         switch (checkCommandName(string))
         {
-            case NO_CMD  :    break;
+            case NO_CMD  : break;
+            case CMD_CALL:
             case CMD_PUSH:
             case CMD_POP :
             case CMD_JMP :
@@ -112,11 +110,9 @@ static void firstPass(Assembler* const ASM)
             case CMD_JBE :
             case CMD_JB  :
             case CMD_JNE :
-            case CMD_JE  :
-            case CMD_CALL:
-            case CMD_RET :    ASM->current_labels.cmd_counter++;
+            case CMD_JE  : ASM->current_labels.cmd_counter++;
 
-            default:          ASM->current_labels.cmd_counter++;
+            default:       ASM->current_labels.cmd_counter++;
         }
 
         if (strchr(string, ':'))
@@ -129,8 +125,6 @@ static void firstPass(Assembler* const ASM)
     }
 
     FCLOSE(ASM->asm_file);
-
-    ASM->current_labels.cmd_counter = 0;
 }
 
 static void secondPass(Assembler* const ASM)
@@ -190,8 +184,6 @@ static void secondPass(Assembler* const ASM)
     }
 
     FCLOSE(ASM->asm_file);
-
-    StackDtor(&ASM->callStack);
 }
 
 static void processPushOrPopArgument(Assembler* const ASM)
@@ -247,7 +239,6 @@ static void interpreter(Assembler* const ASM)
 
     ensureCapacityOfCodeArray(ASM);
 
-    ASM->current_labels.cmd_counter++;
     ASM->commands.code[ASM->commands.size++] = checkCommandName(ASM->cmd.instruction);
 
     switch (checkCommandName(ASM->cmd.instruction))
@@ -255,7 +246,7 @@ static void interpreter(Assembler* const ASM)
         case CMD_PUSH:    encodePush (ASM);    break;
         case CMD_POP :    encodePop  (ASM);    break;
         case CMD_IN  :    encodeIn   (ASM);    break;
-        case CMD_CALL:    encodeCall (ASM);
+        case CMD_CALL:
         case CMD_JMP :
         case CMD_JAE :
         case CMD_JA  :
@@ -263,7 +254,6 @@ static void interpreter(Assembler* const ASM)
         case CMD_JB  :
         case CMD_JNE :
         case CMD_JE  :    encodeJumps(ASM);    break;
-        case CMD_RET :    encodeRet  (ASM);    break;
 
         default: break;
     }
@@ -288,8 +278,6 @@ static void encodePush(Assembler* const ASM)
     assert(ASM);
     assert(ASM->commands.code);
 
-    ASM->current_labels.cmd_counter++;
-
     if (ASM->cmd.presence_reg)
     {
         ASM->commands.code[ASM->commands.size - 1] = setbit(CMD_PUSH, USING_REGISTER);
@@ -311,8 +299,6 @@ static void encodePop(Assembler* ASM)
 {
     assert(ASM);
     assert(ASM->commands.code);
-
-    ASM->current_labels.cmd_counter++;
 
     if (ASM->cmd.presence_reg)
     {
@@ -336,8 +322,6 @@ static void encodeIn(Assembler* const ASM)
     assert(ASM);
     assert(ASM->commands.code);
 
-    ASM->current_labels.cmd_counter++;
-
     scanf("%d", &(ASM->commands.code[ASM->commands.size++]));
 }
 
@@ -346,8 +330,6 @@ static void encodeJumps(Assembler* const ASM)
     assert(ASM);
     assert(ASM->commands.code);
     assert(ASM->current_labels.labels);
-
-    ASM->current_labels.cmd_counter++;
 
     if (atoi(ASM->cmd.name_of_label))
     {
@@ -366,33 +348,6 @@ static void encodeJumps(Assembler* const ASM)
             assert(0);
         }
     }
-}
-
-static void encodeCall(Assembler* const ASM)
-{
-    assert(ASM);
-    assert(ASM->commands.code);
-
-    ASM->commands.code[ASM->commands.size - 1] = CMD_JMP;
-
-    push(&ASM->callStack, ASM->current_labels.cmd_counter + 1);
-}
-
-static void encodeRet(Assembler* const ASM)
-{
-    assert(ASM);
-    assert(ASM->commands.code);
-
-    ASM->commands.code[ASM->commands.size - 1] = CMD_JMP;
-    ASM->current_labels.cmd_counter++;
-
-    if (!ASM->callStack.size)
-    {
-        displaySyntaxError(ASM);
-        assert(0);
-    }
-
-    ASM->commands.code[ASM->commands.size++] = pop(&ASM->callStack);
 }
 
 static void displaySyntaxError(Assembler* const ASM)

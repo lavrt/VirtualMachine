@@ -14,7 +14,7 @@ void LabelsCtor(Assembler* const ASM)
 
     for (int i = 0; i < MAX_NUMBER_OF_LABELS; i++)
     {
-        ASM->current_labels.labels[i].position = -1; // FIXME лучше хранить количество записанных, а не -1
+        ASM->current_labels.labels[i].position = -1;
     }
 }
 

@@ -16,31 +16,32 @@ static void ReadData(PROCESSOR* spu, FILE* data_file);
 static int numbersEqual(StackElem_t first_number, StackElem_t second_number);
 static constexpr int setbit(const int value, const int position);
 
-static void executeHlt(PROCESSOR* spu);
-static void executePush(PROCESSOR* spu);
 static void executePushFromRegister(PROCESSOR* spu);
-static void executePushFromRam(PROCESSOR* spu);
-static void executePop(PROCESSOR* spu);
 static void executePopIntoRegister(PROCESSOR* spu);
+static void executePushFromRam(PROCESSOR* spu);
 static void executePopIntoRam(PROCESSOR* spu);
-static void executeIn(PROCESSOR* spu);
-static void executeOut(PROCESSOR* spu);
+static void stopExecution(PROCESSOR* spu);
 static void executeDump(PROCESSOR* spu);
+static void executeSqrt(PROCESSOR* spu);
+static void executeCall(PROCESSOR* spu);
+static void executePush(PROCESSOR* spu);
+static void executePop(PROCESSOR* spu);
+static void executeOut(PROCESSOR* spu);
 static void executeAdd(PROCESSOR* spu);
 static void executeSub(PROCESSOR* spu);
 static void executeMul(PROCESSOR* spu);
 static void executeDiv(PROCESSOR* spu);
-static void executeSqrt(PROCESSOR* spu);
 static void executeSin(PROCESSOR* spu);
 static void executeCos(PROCESSOR* spu);
 static void executeJmp(PROCESSOR* spu);
-static void executeJa(PROCESSOR* spu);
 static void executeJae(PROCESSOR* spu);
-static void executeJb(PROCESSOR* spu);
 static void executeJbe(PROCESSOR* spu);
-static void executeJe(PROCESSOR* spu);
 static void executeJne(PROCESSOR* spu);
-static void stopExecution(PROCESSOR* spu);
+static void executeRet(PROCESSOR* spu);
+static void executeHlt(PROCESSOR* spu);
+static void executeJa(PROCESSOR* spu);
+static void executeJe(PROCESSOR* spu);
+static void executeJb(PROCESSOR* spu);
 
 // global --------------------------------------------------------------------------------------------------------------
 
@@ -91,101 +92,33 @@ void spuRun(PROCESSOR* spu)
     {
         switch(spu->code[spu->ip])
         {
-            case CMD_HLT:
-                executeHlt(spu);
-                break;
+            case setbit(CMD_PUSH, USING_REGISTER): executePushFromRegister(spu); break;
+            case setbit(CMD_POP , USING_REGISTER): executePopIntoRegister(spu);  break;
+            case setbit(CMD_PUSH, USING_RAM):      executePushFromRam(spu);      break;
+            case setbit(CMD_POP , USING_RAM):      executePopIntoRam(spu);       break;
 
-            case CMD_PUSH:
-                executePush(spu);
-                break;
-
-            case setbit(CMD_PUSH, USING_REGISTER):
-                executePushFromRegister(spu);
-                break;
-
-            case setbit(CMD_PUSH, USING_RAM):
-                executePushFromRam(spu);
-                break;
-
-            case CMD_POP:
-                executePop(spu);
-                break;
-
-            case setbit(CMD_POP, USING_REGISTER):
-                executePopIntoRegister(spu);
-                break;
-
-            case setbit(CMD_POP, USING_RAM):
-                executePopIntoRam(spu);
-                break;
-
-            case CMD_IN:
-                executeIn(spu);
-                break;
-
-            case CMD_OUT:
-                executeOut(spu);
-                break;
-
-            case CMD_DUMP:
-                executeDump(spu);
-                break;
-
-            case CMD_ADD:
-                executeAdd(spu);
-                break;
-
-            case CMD_SUB:
-                executeSub(spu);
-                break;
-
-            case CMD_MUL:
-                executeMul(spu);
-                break;
-
-            case CMD_DIV:
-                executeDiv(spu);
-                break;
-
-            case CMD_SQRT:
-                executeSqrt(spu);
-                break;
-
-            case CMD_SIN:
-                executeSin(spu);
-                break;
-
-            case CMD_COS:
-                executeCos(spu);
-                break;
-
-            case CMD_JMP:
-                executeJmp(spu);
-                break;
-
-            case CMD_JA:
-                executeJa(spu);
-                break;
-
-            case CMD_JAE:
-                executeJae(spu);
-                break;
-
-            case CMD_JB:
-                executeJb(spu);
-                break;
-
-            case CMD_JBE:
-                executeJbe(spu);
-                break;
-
-            case CMD_JE:
-                executeJe(spu);
-                break;
-
-            case CMD_JNE:
-                executeJne(spu);
-                break;
+            case CMD_HLT:  executeHlt(spu);  break;
+            case CMD_PUSH: executePush(spu); break;
+            case CMD_POP:  executePop(spu);  break;
+            case CMD_IN:   executeIn(spu);   break;
+            case CMD_OUT:  executeOut(spu);  break;
+            case CMD_DUMP: executeDump(spu); break;
+            case CMD_ADD:  executeAdd(spu);  break;
+            case CMD_SUB:  executeSub(spu);  break;
+            case CMD_MUL:  executeMul(spu);  break;
+            case CMD_DIV:  executeDiv(spu);  break;
+            case CMD_SQRT: executeSqrt(spu); break;
+            case CMD_SIN:  executeSin(spu);  break;
+            case CMD_COS:  executeCos(spu);  break;
+            case CMD_JMP:  executeJmp(spu);  break;
+            case CMD_JA:   executeJa(spu);   break;
+            case CMD_JAE:  executeJae(spu);  break;
+            case CMD_JB:   executeJb(spu);   break;
+            case CMD_JBE:  executeJbe(spu);  break;
+            case CMD_JE:   executeJe(spu);   break;
+            case CMD_JNE:  executeJne(spu);  break;
+            case CMD_RET:  executeRet(spu);  break;
+            case CMD_CALL: executeCall(spu); break;
 
             default: stopExecution(spu);
         }
@@ -306,7 +239,7 @@ static void executeDiv(PROCESSOR* spu)
     StackElem_t b = pop(&spu->stack);
     assert(a != 0);
     push(&spu->stack, b / a);
-    spu-> ip += 1;
+    spu->ip += 1;
 }
 
 static void executeSqrt(PROCESSOR* spu)
@@ -420,6 +353,22 @@ static void executeJne(PROCESSOR* spu)
     }
 }
 
+static void executeRet(PROCESSOR* spu)
+{
+    assert(spu);
+
+    int value = pop(&spu->stack);
+    spu->ip = value;
+}
+
+static void executeCall(PROCESSOR* spu)
+{
+    assert(spu);
+
+    push(&spu->stack, spu->ip + 2);
+    spu->ip = (unsigned)spu->code[spu->ip + 1];
+}
+
 static void stopExecution(PROCESSOR* spu)
 {
     fprintf(stderr, "INVALID INSTRUCTION: \"%d\"\n", spu->code[spu->ip]);
@@ -432,12 +381,5 @@ static int numbersEqual(StackElem_t first_number, StackElem_t second_number)
     return fabs(first_number - second_number) < kEpsilon;
 }
 
-// void spuDump(PROCESSOsR* spu)
-// {
-//     for (int i = 0; i < spu->size; i++)
-//     {
-//         printf("__%d__\n", spu->code[i]);
-//     }
-//     putchar('\n');
-// }
+
 

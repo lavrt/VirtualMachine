@@ -39,6 +39,7 @@ static void executeJbe(PROCESSOR* spu);
 static void executeJne(PROCESSOR* spu);
 static void executeRet(PROCESSOR* spu);
 static void executeHlt(PROCESSOR* spu);
+static void executeIn(PROCESSOR* spu);
 static void executeJa(PROCESSOR* spu);
 static void executeJe(PROCESSOR* spu);
 static void executeJb(PROCESSOR* spu);
